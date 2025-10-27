@@ -1,0 +1,102 @@
+  spring:
+    config:
+      activate:
+        on-profile: dev
+    devtools:
+      add-properties: true
+    datasource:
+      url: jdbc:mysql://localhost:3307/shop
+      username: root
+      password: password
+      driver-class-name: com.mysql.cj.jdbc.Driver
+    jpa:
+      database-platform: org.hibernate.dialect.MySQL8Dialect
+      hibernate:
+        ddl-auto: update
+      show-sql: false
+      properties:
+        hibernate:
+          format_sql: true
+
+    sendgrid:
+      api-key: ${sendgrid_api-key}
+      from-email: lehuuhuy211405@gmail.com
+      otp-valid-minutes: 5
+      resend-cooldown-minutes: 2
+
+    vnpay:
+      vnp_TmnCode: ${vnpay_vnp_TmnCode}
+      secretKey: ${vnpay_secretkey}
+      vnpay_url: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+      vnpay_api_url: https://sandbox.vnpayment.vn/merchant_webapi/api/transaction
+      return_url: http://localhost:8080/payment/vnpay-return
+      vnp_Version: 2.1.0
+      vnp_Command: pay
+
+    ghn:
+      token: ${ghn_api_token}
+      baseUrl: https://online-gateway.ghn.vn/shiip/public-api
+      shopId: ${shop_id}
+
+    information:
+      fromContactName: HuyLe
+      fromContactPhone: ${fromContactPhone}
+      fromAddress: ${fromAddress}
+      fromDistrictName: ${fromDistrictName}
+      fromDistrictId: ${fromDistrictId}
+      fromProvinceName: ${fromProvinceName}
+      fromWardName: ${fromWardName}
+      fromWardId: ${fromWardId}
+
+
+    twilio:
+      out-going-sms-number: +17754589471
+      account-sid: ${twilio_account-sid}
+      auth-token: ${twilio_auth_token:}
+    # Giới hạn kích thước request body (tính bằng byte)
+    servlet:
+        multipart:
+          max-file-size: 10MB       # Giới hạn file upload (nếu có)
+          max-request-size: 25MB    # Giới hạn tổng request (bao gồm file + JSON)
+      # Giới hạn kích thước request body (cho JSON/XML)
+    server:
+        max-http-request-size: 2MB
+
+    security:
+      oauth2:
+        client:
+          registration:
+            google:
+              client-id: ${google_client-id}
+              client-secret: ${google_client-secret}
+
+  springdoc:
+    api-docs:
+      enabled: true
+    swagger-ui:
+      enabled: true
+  openapi:
+    service:
+      api-docs: backend-service
+      server: http://localhost:${server.port}
+      title: Backend service
+      version: 1.0.0
+
+  frontEnd: http://localhost:5173
+  cloudinary:
+    cloud-name: dca5zhgbs
+    api-key: ${cloudinary_api-key}
+    api-secret: ${cloudinary_api-secret}
+
+
+  jwt:
+    signerKey: ${jwt_signerKey}
+    valid-duration: 3600 # insecond
+    refreshable-duration: 36000 #in seconds
+
+  # Log toàn bộ request
+    logging.level.org.springframework.web: DEBUG
+    logging.level.org.springframework.http: TRACE
+
+    # Log binding data
+    logging.level.org.springframework.validation: TRACE

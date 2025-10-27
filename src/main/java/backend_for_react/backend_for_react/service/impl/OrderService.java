@@ -1,0 +1,292 @@
+package backend_for_react.backend_for_react.service.impl;
+
+import backend_for_react.backend_for_react.common.enums.DeliveryStatus;
+import backend_for_react.backend_for_react.common.enums.OrderAfterSaleStatus;
+import backend_for_react.backend_for_react.common.enums.PaymentStatus;
+import backend_for_react.backend_for_react.common.enums.PaymentType;
+import backend_for_react.backend_for_react.common.utils.SecurityUtils;
+import backend_for_react.backend_for_react.controller.FeeResponse;
+import backend_for_react.backend_for_react.controller.request.Order.OrderCreationRequest;
+import backend_for_react.backend_for_react.controller.request.Order.OrderItem.OrderItemCreationRequest;
+import backend_for_react.backend_for_react.controller.request.Shipping.FeeRequest;
+import backend_for_react.backend_for_react.controller.request.Shipping.ShippingOrderItem;
+import backend_for_react.backend_for_react.controller.request.Shipping.ShippingOrderRequest;
+import backend_for_react.backend_for_react.controller.response.OrderItemResponse;
+import backend_for_react.backend_for_react.controller.response.OrderResponse;
+import backend_for_react.backend_for_react.controller.response.ProductVariantResponse;
+import backend_for_react.backend_for_react.controller.response.ShippingOrderDetailResponse;
+import backend_for_react.backend_for_react.exception.BusinessException;
+import backend_for_react.backend_for_react.exception.ErrorCode;
+import backend_for_react.backend_for_react.exception.MessageError;
+import backend_for_react.backend_for_react.model.*;
+import backend_for_react.backend_for_react.repository.*;
+import backend_for_react.backend_for_react.service.GhnService;
+import backend_for_react.backend_for_react.service.VoucherService;
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+import static backend_for_react.backend_for_react.common.utils.ShippingHelper.*;
+import static backend_for_react.backend_for_react.mapper.OrderMapper.getOrderResponse;
+
+
+@Slf4j(topic = "ORDER-SERVICE")
+@RequiredArgsConstructor
+@Service
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+public class OrderService {
+    OrderRepository orderRepository;
+    ProductRepository productRepository;
+    OrderItemRepository orderItemRepository;
+    SecurityUtils securityUtils;
+    ProductVariantRepository productVariantRepository;
+    ProductService productService;
+    VoucherService voucherService;
+    VoucherRepository voucherRepository;
+    VoucherUsageRepository voucherUsageRepository;
+    GhnService ghnService;
+    private final UserService userService;
+
+    @Transactional(rollbackFor = Exception.class)
+    public Long save(OrderCreationRequest req) {
+        Order newOrder = new Order();
+        User currentUser = securityUtils.getCurrentUser();
+
+        // Thiết lập thông tin cơ bản
+        newOrder.setCustomerName(req.getCustomerName());
+        newOrder.setCustomerPhone(req.getCustomerPhone());
+        newOrder.setDeliveryAddress(req.getDeliveryAddress());
+        newOrder.setDeliveryDistrictId(req.getDeliveryDistrictId());
+        newOrder.setDeliveryWardName(req.getDeliveryWardName());
+        newOrder.setDeliveryProvinceId(req.getDeliveryProvinceId());
+        newOrder.setDeliveryProvinceName(req.getDeliveryProvinceName());
+        newOrder.setDeliveryDistrictName(req.getDeliveryDistrictName());
+        newOrder.setDeliveryWardCode(req.getDeliveryWardCode());
+        newOrder.setServiceDeliveryId(req.getServiceDeliveryId());
+        newOrder.setServiceDeliveryName(req.getServiceDeliveryName());
+        newOrder.setPaymentType(req.getPaymentType());
+        newOrder.setOrderStatus(DeliveryStatus.PENDING);
+        newOrder.setPaymentStatus(PaymentStatus.UNPAID);
+        newOrder.setAfterSaleStatus(OrderAfterSaleStatus.NONE);
+
+        if (currentUser != null) {
+            newOrder.setUser(currentUser);
+        }
+
+        orderRepository.save(newOrder);
+
+        // Tạo order item
+        BigDecimal subTotal = BigDecimal.ZERO;
+        List<OrderItem> orderItems = new ArrayList<>();
+
+        for (OrderItemCreationRequest orderItemReq : req.getOrderItems()) {
+            ProductVariant productVariant = productVariantRepository.findById(orderItemReq.getProductVariantId())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.NOT_EXISTED, MessageError.PRODUCT_VARIANT_NOT_FOUND));
+
+            if (orderItemReq.getQuantity() > productVariant.getQuantity()) {
+                throw new BusinessException(ErrorCode.BAD_REQUEST, "Product exceeds quantity");
+            }
+
+            // Cập nhật tồn kho
+            productVariant.setQuantity(productVariant.getQuantity() - orderItemReq.getQuantity());
+            productVariantRepository.save(productVariant);
+
+            // Tạo order item
+            OrderItem orderItem = new OrderItem();
+            orderItem.setOrder(newOrder);
+            orderItem.setProductVariant(productVariant);
+            orderItem.setQuantity(orderItemReq.getQuantity());
+
+            BigDecimal itemTotal = productVariant.getPrice().multiply(BigDecimal.valueOf(orderItemReq.getQuantity()));
+            subTotal = subTotal.add(itemTotal);
+
+            // Tạm gán finalPrice = giá gốc (chưa trừ voucher)
+            orderItem.setFinalPrice(productVariant.getPrice());
+
+            orderItems.add(orderItem);
+            orderItemRepository.save(orderItem);
+        }
+
+        // Cập nhật kích thước - trọng lượng
+        newOrder.setHeight(calculateTotalHeight(orderItems));
+        newOrder.setLength(calculateTotalLength(orderItems));
+        newOrder.setWeight(calculateTotalWeight(orderItems));
+        newOrder.setWidth(calculateTotalWidth(orderItems));
+
+        //Tinh phi ship
+        FeeRequest feeRequest = ghnService.toFeeRequest(newOrder);
+        BigDecimal feeShip = ghnService.calculateShippingFee(feeRequest).getTotal();
+
+        // Áp dụng voucher nếu có
+        BigDecimal discountValue = BigDecimal.ZERO;
+        Voucher voucher = null;
+
+        if (req.getVoucherId() != null) {
+            voucher = voucherRepository.findById(req.getVoucherId())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.BAD_REQUEST, "Voucher not found"));
+
+            voucherService.validateVoucherWithOderAmount(voucher, subTotal);
+            voucherService.validateVoucherUsageUser(voucher, currentUser);
+
+            if (voucher.getIsShipping() != null && voucher.getIsShipping()) {
+                discountValue = voucherService.calculateDiscountValue(feeShip, voucher);
+            } else {
+                discountValue = voucherService.calculateDiscountValue(subTotal, voucher);
+            }
+
+            voucherService.decreaseVoucherQuantity(voucher);
+            newOrder.setVoucher(voucher);
+            newOrder.setVoucherDiscountValue(discountValue);
+
+            if (currentUser != null) {
+                VoucherUsage usage = new VoucherUsage();
+                usage.setVoucher(voucher);
+                usage.setUser(currentUser);
+                voucherUsageRepository.save(usage);
+            }
+        }
+
+        // Phân bổ giảm giá cho từng sản phẩm
+        if (discountValue.compareTo(BigDecimal.ZERO) > 0 && !voucher.getIsShipping()) {
+            for (OrderItem item : orderItems) {
+                BigDecimal itemTotal = item.getFinalPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
+                BigDecimal ratio = itemTotal.divide(subTotal, 6, BigDecimal.ROUND_HALF_UP);
+                BigDecimal itemDiscount = discountValue.multiply(ratio);
+                BigDecimal finalUnitPrice = item.getFinalPrice().subtract(itemDiscount.divide(BigDecimal.valueOf(item.getQuantity()), 2, BigDecimal.ROUND_HALF_UP));
+
+                item.setFinalPrice(finalUnitPrice);
+                orderItemRepository.save(item);
+            }
+        }
+
+        // Cập nhật tổng tiền đơn hàng
+        BigDecimal totalAfterDiscount = subTotal.subtract(discountValue);
+        newOrder.setOriginalOrderAmount(subTotal);
+        newOrder.setTotalAmount(totalAfterDiscount.add(feeShip));
+
+        orderRepository.save(newOrder);
+
+        return newOrder.getId();
+    }
+
+
+
+    @Transactional(rollbackFor = Exception.class)
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('CHANGE_STATUS_ORDER')")
+    public void changeStatus(Long orderId, DeliveryStatus status) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_EXISTED, MessageError.ORDER_NOT_FOUND));
+        order.setOrderStatus(status);
+        if(status == DeliveryStatus.DELIVERED) {
+            order.setDeliveredAt(LocalDateTime.now());
+        }
+        orderRepository.save(order);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void completeOrder(Long orderId) {
+        User currentUser = securityUtils.getCurrentUser();
+        Order order = orderRepository.findOrderByIdAndUser(orderId,currentUser)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_EXISTED,"Order not found or not yours"));
+        order.setOrderStatus(DeliveryStatus.COMPLETED);
+        // Nếu có user, cập nhật tổng chi tiêu và hạng
+        User user = order.getUser();
+        if (user != null) {
+            user.setTotalSpent(user.getTotalSpent().add(order.getTotalAmount()));
+            userService.updateRank(user);
+        }
+        order.setCompletedAt(LocalDateTime.now());
+        updateSoldQuantity(order.getOrderItems());
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void updateSoldQuantity(List<OrderItem> orderItems) {
+        for (OrderItem orderItem : orderItems) {
+            ProductVariant productVariant = orderItem.getProductVariant();
+            Product product = productRepository.findById(productVariant.getProduct().getId())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.NOT_EXISTED, MessageError.PRODUCT_NOT_FOUND));
+            product.setSoldQuantity(product.getSoldQuantity() + orderItem.getQuantity());
+            productRepository.save(product);
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void cancelOrder(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_EXISTED, MessageError.ORDER_NOT_FOUND));
+        if(order.getOrderStatus().equals(DeliveryStatus.PENDING)){
+            for(OrderItem orderItem : order.getOrderItems()){
+                ProductVariant productVariant = orderItem.getProductVariant();
+                productVariant.setQuantity(productVariant.getQuantity() + orderItem.getQuantity());
+                productVariantRepository.save(productVariant);
+            }
+        }else {
+            throw new BusinessException(ErrorCode.BAD_REQUEST,"Can't cancel order");
+        }
+    }
+
+
+
+    public void completePayment(Long orderId) {
+        Order order = orderRepository.findById(orderId).orElseThrow(() -> new BusinessException(ErrorCode.NOT_EXISTED, MessageError.ORDER_NOT_FOUND));
+        if(order.getPaymentType().equals(PaymentType.CASH) && !order.getOrderStatus().equals(DeliveryStatus.COMPLETED)){
+            throw new BusinessException(ErrorCode.BAD_REQUEST , "Order status is not COMPLETED.");
+        }
+        order.setPaymentStatus(PaymentStatus.PAID);
+        orderRepository.save(order);
+    }
+    public OrderResponse getOrderById(Long orderId) {
+        Order order = orderRepository.findById(orderId).orElseThrow(() -> new BusinessException(ErrorCode.NOT_EXISTED, MessageError.ORDER_NOT_FOUND));
+        return getOrderResponse(order);
+    }
+
+    /**
+     * Tự động chuyển trạng thái đơn hàng từ DELIVERED -> DELIVERED_CONFIRMED
+     * nếu đã quá 7 ngày kể từ ngày giao hàng thành công.
+     * Chạy mỗi ngày lúc 2h sáng.
+     */
+    @Scheduled(cron = "0 0 2 * * *") // chạy mỗi ngày lúc 2:00 sáng
+    @Transactional
+    public void autoConfirmOrdersAfter7Days() {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime sevenDaysAgo = now.minusDays(7);
+
+        // Lấy các đơn đã giao thành công nhưng chưa được xác nhận
+        List<Order> ordersToUpdate = orderRepository.findAllByOrderStatusAndDeliveredAtBefore(
+                DeliveryStatus.DELIVERED,
+                sevenDaysAgo
+        );
+
+        if (ordersToUpdate.isEmpty()) {
+            log.info("Không có đơn hàng nào cần tự động xác nhận hôm nay.");
+            return;
+        }
+
+        for (Order order : ordersToUpdate) {
+            try {
+                order.setOrderStatus(DeliveryStatus.COMPLETED);
+                User user = order.getUser();
+                if (user != null) {
+                    user.setTotalSpent(user.getTotalSpent().add(order.getTotalAmount()));
+                    userService.updateRank(user);
+                }
+                order.setCompletedAt(now);
+                orderRepository.save(order);
+                updateSoldQuantity(order.getOrderItems());
+                log.info("Đã tự động xác nhận đơn hàng id={} sau 7 ngày.", order.getId());
+            } catch (Exception e) {
+                log.error("Lỗi khi tự động xác nhận đơn hàng id={}: {}", order.getId(), e.getMessage());
+            }
+        }
+    }
+}
