@@ -42,7 +42,7 @@ public class PaymentService {
             throw new BusinessException(ErrorCode.BAD_REQUEST, "Payment type is not BANK_TRANSFER");
         }
         // VNPay yêu cầu nhân 100
-        long amount = 10000*100;
+        long amount = order.getTotalAmount().longValue()*100;
         String vnp_TmnCode = vnpayConfig.getVnpTmnCode();
 
         String vnp_TxnRef = "ORD" + orderId + "_" + System.currentTimeMillis();
