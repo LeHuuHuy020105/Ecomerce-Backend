@@ -1,6 +1,7 @@
 package backend_for_react.backend_for_react.service;
 
 
+import backend_for_react.backend_for_react.common.enums.OTPType;
 import com.sendgrid.Method;
 import com.sendgrid.Request;
 import com.sendgrid.Response;
@@ -94,7 +95,7 @@ public class SendGridService {
         }
     }
 
-    public void emailWithOTP(String to, String name ,String code) throws IOException {
+    public void emailWithOTP(String to, String name ,String code , OTPType otpType) throws IOException {
         log.info("Email verification started");
         log.info("to: {}", to);
         log.info("from : {}", from);
@@ -104,12 +105,12 @@ public class SendGridService {
         Email fromEmail = new Email(from,"EvoMart");
         Email toEmail = new Email(to);
 
-        String subject = "Verification email";
+        String subject = otpType.name();
 
         Map<String , String> map = new HashMap<>();
         map.put("name", name);
         map.put("subject",subject);
-        map.put("verification-code", code);
+        map.put("otp_code", code);
         map.put("expire_minutes",String.valueOf(otpValidMinutes));
 
         Mail mail = new Mail();
@@ -123,7 +124,7 @@ public class SendGridService {
 
         map.forEach(personalization::addDynamicTemplateData);
         mail.addPersonalization(personalization);
-        mail.setTemplateId("d-1cc4e97fc6e9404eaa0d392665313df2");
+        mail.setTemplateId("d-12931551d6534e64b54e125c7817cd35");
 
         Request request = new Request();
         request.setMethod(Method.POST);

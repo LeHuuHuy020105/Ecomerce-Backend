@@ -86,7 +86,7 @@ public class ProductController {
         return new ResponseEntity<>("",HttpStatus.OK);
     }
 
-    @GetMapping("/{productId}")
+    @GetMapping("/detail/{productId}")
     public ResponseEntity<Object> getDetailProduct (@PathVariable Long productId){
         Map<String,Object> result = new LinkedHashMap<>();
         result.put("status", HttpStatus.OK.value());

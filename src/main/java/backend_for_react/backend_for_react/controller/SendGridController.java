@@ -1,5 +1,6 @@
 package backend_for_react.backend_for_react.controller;
 
+import backend_for_react.backend_for_react.common.enums.OTPType;
 import backend_for_react.backend_for_react.controller.response.ApiResponse;
 import backend_for_react.backend_for_react.service.SendGridService;
 import lombok.AccessLevel;
@@ -27,7 +28,7 @@ public class SendGridController {
     public ApiResponse<Void> sendotp(@RequestParam String to) throws IOException {
         Random random = new Random();
         String otp = String.format("%06d", random.nextInt(999999));
-        sendGridService.emailWithOTP(to,"Huy",otp);
+        sendGridService.emailWithOTP(to,"Huy",otp, OTPType.VERIFICATION);
         return ApiResponse.<Void>builder()
                 .status(HttpStatus.OK.value())
                 .message("OTP sent")

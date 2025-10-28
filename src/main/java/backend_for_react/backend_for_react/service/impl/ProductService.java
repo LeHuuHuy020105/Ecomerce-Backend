@@ -227,6 +227,7 @@ public class ProductService {
         Product newProduct = Product.builder()
                 .category(category)
                 .soldQuantity(0)
+                .avgRating(0.0)
                 .description(req.getDescription())
                 .name(req.getName())
                 .listPrice(req.getListPrice())

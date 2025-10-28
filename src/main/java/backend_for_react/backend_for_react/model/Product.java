@@ -28,6 +28,7 @@ public class Product extends BaseEntity{
     private BigDecimal listPrice;
     private BigDecimal salePrice;
     private Integer soldQuantity;
+    private Double avgRating;
 
     @Enumerated(EnumType.STRING)
     private ProductStatus productStatus;

@@ -40,6 +40,11 @@ public class AppConfig {
     @Value("${spring.twilio.auth-token}")
     private String AUTH_TOKEN;
 
+//    @Value("${redis.host}")
+//    private String redisHost;
+//
+//    @Value("${redis.port}")
+//    private int redisPort;
 
     @Bean
     public PasswordEncoder passwordEncoder(){
@@ -131,13 +136,13 @@ public class AppConfig {
         Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
     }
 
-    @Bean
-    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
-        RedisTemplate<String, Object> template = new RedisTemplate<>();
-        template.setConnectionFactory(connectionFactory);
-        template.setKeySerializer(new StringRedisSerializer());
-        template.setValueSerializer(new GenericJackson2JsonRedisSerializer());
-        return template;
-    }
+//    @Bean
+//    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
+//        RedisTemplate<String, Object> template = new RedisTemplate<>();
+//        template.setConnectionFactory(connectionFactory);
+//        template.setKeySerializer(new StringRedisSerializer());
+//        template.setValueSerializer(new GenericJackson2JsonRedisSerializer());
+//        return template;
+//    }
 
 }

@@ -31,7 +31,7 @@ public class OTPService {
         String redisKey = "otp:"+ otpType.name().toLowerCase() +user.getId();
         String code = generateCode();
         redisTemplate.opsForValue().set(redisKey,code,otpValidMinutes, TimeUnit.MINUTES);
-        sendGridService.emailWithOTP(user.getEmail(), user.getFullName(), code);
+        sendGridService.emailWithOTP(user.getEmail(), user.getFullName(), code, otpType);
     }
 
 
