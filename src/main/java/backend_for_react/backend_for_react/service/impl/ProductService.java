@@ -12,6 +12,7 @@ import backend_for_react.backend_for_react.controller.request.VariantQuantityUpd
 import backend_for_react.backend_for_react.controller.response.*;
 import backend_for_react.backend_for_react.exception.BusinessException;
 import backend_for_react.backend_for_react.exception.ErrorCode;
+import backend_for_react.backend_for_react.mapper.ProductVariantMapper;
 import backend_for_react.backend_for_react.model.*;
 import backend_for_react.backend_for_react.repository.*;
 import jakarta.persistence.EntityNotFoundException;
@@ -309,6 +310,7 @@ public class ProductService {
                 VariantAttributeValue vav = VariantAttributeValue.builder()
                         .productVariant(productVariant)
                         .attributeValue(attributeValue)
+                        .status(Status.ACTIVE)
                         .build();
                 variantAttributeValueRepository.save(vav);
             });
@@ -409,9 +411,10 @@ public class ProductService {
      */
 
     private ProductResponse getProductDetailResponse(Product product) {
-        List<ProductVariantResponse> productVariantResponses = product.getVariants().stream().map(
-            this::getProductVariantResponse
-        ).toList();
+        List<ProductVariantResponse> productVariantResponses = product.getVariants().stream()
+                .filter(productVariant -> productVariant.getStatus() == Status.ACTIVE)
+                .map(productVariant -> ProductVariantMapper.getProductVariantResponse(productVariant))
+                .toList();
         return ProductResponse.builder()
                 .id(product.getId())
                 .name(product.getName())
@@ -449,20 +452,6 @@ public class ProductService {
                 .build();
     }
 
-    public ProductVariantResponse getProductVariantResponse(ProductVariant productVariant) {
-        return ProductVariantResponse.builder()
-                .id(productVariant.getId())
-                .price(productVariant.getPrice())
-                .quantity(productVariant.getQuantity())
-                .height(productVariant.getHeight())
-                .width(productVariant.getWidth())
-                .length(productVariant.getLength())
-                .weight(productVariant.getWeight())
-                .sku(productVariant.getSku())
-                .variantAttributes(getVariantAttributeResponse(productVariant))
-                .build();
-    }
-
 
     private List<AttributeResponse> getAttributeResponse(Product product) {
         List<AttributeResponse> attributeResponses = attributeRepository.findAllByProduct(product).stream().map(
@@ -488,22 +477,6 @@ public class ProductService {
         return attributeValueResponses;
     }
 
-    private List<VariantAttributeResponse> getVariantAttributeResponse(ProductVariant productVariant) {
-
-        List<VariantAttributeResponse> variantAttributeResponses = variantAttributeValueRepository.findAllByProductVariant(productVariant).stream().map(
-
-                variantAttributeValue -> {
-                    Attribute attribute = attributeRepository.findById(variantAttributeValue.getAttributeValue().getAttribute().getId())
-                            .orElseThrow(() -> new BusinessException(ErrorCode.NOT_EXISTED, "Attribute not exist!"));
-                    return VariantAttributeResponse.builder()
-                            .id(variantAttributeValue.getAttributeValue().getId())
-                            .attribute(attribute.getName())
-                            .value(variantAttributeValue.getAttributeValue().getValue())
-                            .build();
-                }
-        ).toList();
-        return variantAttributeResponses;
-    }
 
     private List<String> getImageProduct(Product product) {
         List<String> imageProduct = imageProductRepository.findAllByStatusAndProduct(Status.ACTIVE, product).stream().map(

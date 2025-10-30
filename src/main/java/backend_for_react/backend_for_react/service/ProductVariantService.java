@@ -13,11 +13,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
-public interface ProductVariantService {
-    PageResponse<ProductVariantResponse> findAll(String keyword , String sort, int page, int size);
-    Long save(ProductVariantCreationRequest req ,  List<MultipartFile> images);
-    void update(ProductVariantUpdateRequest req);
-    void delete(Long id);
-    ProductVariantResponse getProductVariantById(Long productVariantId);
-    List<ProductVariantResponse> getProductVariantByProductId (Product product);
+public class ProductVariantService {
+
 }

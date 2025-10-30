@@ -8,6 +8,7 @@ import backend_for_react.backend_for_react.controller.request.ImportProductDetai
 import backend_for_react.backend_for_react.controller.response.*;
 import backend_for_react.backend_for_react.exception.BusinessException;
 import backend_for_react.backend_for_react.exception.ErrorCode;
+import backend_for_react.backend_for_react.mapper.ProductVariantMapper;
 import backend_for_react.backend_for_react.model.*;
 import backend_for_react.backend_for_react.repository.ImportDetailRepository;
 import backend_for_react.backend_for_react.repository.ImportProductRepository;
@@ -288,7 +289,7 @@ public class ImportProductService {
         return response;
     }
     private ImportDetailResponse getImportDetailResponse(ImportDetail importDetail) {
-        ProductVariantResponse productVariantResponse = productServiceImpl.getProductVariantResponse(importDetail.getProductVariant());
+        ProductVariantResponse productVariantResponse = ProductVariantMapper.getProductVariantResponse(importDetail.getProductVariant());
         return ImportDetailResponse.builder()
                 .id(importDetail.getId())
                 .unitPrice(importDetail.getUnitPrice())
