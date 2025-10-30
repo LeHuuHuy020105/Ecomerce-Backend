@@ -69,13 +69,23 @@ public class GhnServiceImpl implements GhnService {
     @Value("${spring.information.fromContactName}")
     private String fromName;
 
-    private HttpHeaders defaultHeaders() {
+    private HttpHeaders defaultHeadersProd() {
         log.info("token: {}" , deliveryConfig.getToken());
         log.info("shopId: {}" , deliveryConfig.getShopId());
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("Token", deliveryConfig.getToken());
         headers.set("ShopId", deliveryConfig.getShopId().toString());
+        return headers;
+    }
+
+    private HttpHeaders defaultHeadersDev() {
+        log.info("token: {}" , deliveryConfig.getTokenDev());
+        log.info("shopId: {}" , deliveryConfig.getShopIdDev());
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Token", deliveryConfig.getTokenDev());
+        headers.set("ShopId", deliveryConfig.getShopIdDev().toString());
         return headers;
     }
 
@@ -118,7 +128,7 @@ public class GhnServiceImpl implements GhnService {
 
         log.info("body: {}", body);
 
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, defaultHeaders());
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, defaultHeadersDev());
         ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
 
         log.info("GHN Create Order Response: {}", response.getBody());
@@ -192,7 +202,7 @@ public class GhnServiceImpl implements GhnService {
 
         log.info("body: {}", body);
 
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, defaultHeaders());
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, defaultHeadersDev());
         ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
 
         log.info("GHN Create Order Response: {}", response.getBody());
@@ -239,7 +249,7 @@ public class GhnServiceImpl implements GhnService {
         Map<String, Object> body = new HashMap<>();
         body.put("order_code", ghnOrderCode);
 
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, defaultHeaders());
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, defaultHeadersDev());
         ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
 
         log.info("GHN Detail Response: {}", response.getBody());
@@ -263,7 +273,7 @@ public class GhnServiceImpl implements GhnService {
     @Override
     public FeeResponse calculateShippingFee(FeeRequest req) {
         log.info("Calculate Fee Request: {}", req);
-        String url = deliveryConfig.getBaseUrl() + "/v2/shipping-order/fee";
+        String url = deliveryConfig.getBaseUrlProd() + "/v2/shipping-order/fee";
 
         Map<String, Object> body = new HashMap<>();
         body.put("from_district_id", req.getFromDistrictId());
@@ -276,7 +286,7 @@ public class GhnServiceImpl implements GhnService {
         body.put("width", req.getWidth());
         body.put("length", req.getLength());
 
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, defaultHeaders());
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, defaultHeadersProd());
         ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
 
         log.info("GHN Fee Response: {}", response.getBody());
@@ -403,7 +413,7 @@ public class GhnServiceImpl implements GhnService {
     public Map<String, String> resolveAddress(Integer districtId, String wardCode) {
         // Lấy thông tin Quận
         String districtUrl = deliveryConfig.getBaseUrl() + "/master-data/district";
-        HttpEntity<Void> entity = new HttpEntity<>(defaultHeaders());
+        HttpEntity<Void> entity = new HttpEntity<>(defaultHeadersProd());
 
         ResponseEntity<Map> districtResp = restTemplate.exchange(districtUrl, HttpMethod.POST, entity, Map.class);
         String districtName = null;
@@ -423,7 +433,7 @@ public class GhnServiceImpl implements GhnService {
         // Lấy thông tin Phường
         String wardUrl = deliveryConfig.getBaseUrl() + "/master-data/ward";
         Map<String, Integer> req = Map.of("district_id", districtId);
-        HttpEntity<Map<String, Integer>> wardEntity = new HttpEntity<>(req, defaultHeaders());
+        HttpEntity<Map<String, Integer>> wardEntity = new HttpEntity<>(req, defaultHeadersProd());
 
         ResponseEntity<Map> wardResp = restTemplate.exchange(wardUrl, HttpMethod.POST, wardEntity, Map.class);
         String wardName = null;

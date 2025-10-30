@@ -41,6 +41,11 @@ public class OrderItem extends BaseEntity {
     @Column(precision = 15, scale = 2, nullable = false)
     private BigDecimal finalPrice;
 
+    private BigDecimal listPrice;
+    private String nameProduct;
+    private String urlImage;
+
+
     public String buildName() {
         StringBuilder result = new StringBuilder();
         result.append(this.getProductVariant().getProduct().getName());

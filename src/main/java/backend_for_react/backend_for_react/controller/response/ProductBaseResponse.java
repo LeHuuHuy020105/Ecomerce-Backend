@@ -22,7 +22,7 @@ public class ProductBaseResponse {
     private String urlvideo;
     private String urlCoverImage;
     private Integer soldQuantity;
-    private String avgRating;
+    private Double avgRating;
     private ProductStatus status;
     private LocalDateTime createdAt;
     private LocalDateTime updateAt;

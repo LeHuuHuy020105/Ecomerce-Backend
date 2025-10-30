@@ -20,10 +20,13 @@
 
     sendgrid:
       api-key: ${sendgrid_api-key}
-      from-email: lehuuhuy211405@gmail.com
+
       otp-valid-minutes: 5
       resend-cooldown-minutes: 2
 
+    fusionauth:
+      api-key: ${fusionauth_api-key}
+      baseUrl: http://localhost:9011
 
     vnpay:
       vnp_TmnCode: ${vnpay_vnp_TmnCode}
@@ -36,8 +39,11 @@
 
     ghn:
       token: ${ghn_api_token}
-      baseUrl: https://online-gateway.ghn.vn/shiip/public-api
-      shopId: ${shop_id}
+      token-dev: ${ghn_token_dev}
+      baseUrlDev: https://dev-online-gateway.ghn.vn/shiip/public-api
+      baseUrlProd: https://online-gateway.ghn.vn/shiip/public-api
+      shopId: ${ghn_api_shop_id}
+      shopId-dev: ${ghn_api_shop_id_dev}
 
     information:
       fromContactName: HuyLe

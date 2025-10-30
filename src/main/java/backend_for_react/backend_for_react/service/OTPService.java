@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit;
 public class OTPService {
 
     private final RedisTemplate redisTemplate;
-    private final SendGridService sendGridService;
+    private final FusionAuthService fusionAuthService;
 
     @Value("${spring.sendgrid.otp-valid-minutes}")
     private int otpValidMinutes;
@@ -31,7 +31,7 @@ public class OTPService {
         String redisKey = "otp:"+ otpType.name().toLowerCase() +user.getId();
         String code = generateCode();
         redisTemplate.opsForValue().set(redisKey,code,otpValidMinutes, TimeUnit.MINUTES);
-        sendGridService.emailWithOTP(user.getEmail(), user.getFullName(), code, otpType);
+        fusionAuthService.sendOTP(code,user);
     }
 
 

@@ -11,6 +11,7 @@ import backend_for_react.backend_for_react.repository.UserRankRepository;
 import backend_for_react.backend_for_react.repository.UserRepository;
 import com.sendgrid.SendGrid;
 import com.twilio.Twilio;
+import io.fusionauth.client.FusionAuthClient;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,13 +33,16 @@ import java.util.Set;
 @Slf4j
 public class AppConfig {
 
-    @Value("${spring.sendgrid.api-key}")
-    private String apiKey;
-
     @Value("${spring.twilio.account-sid}")
     private String ACCOUNT_SID;
     @Value("${spring.twilio.auth-token}")
     private String AUTH_TOKEN;
+
+    @Value("${spring.fusionauth.api-key}")
+    private String fusionAuthApiKey;
+
+    @Value("${spring.fusionauth.baseUrl}")
+    private String fusionAuthBaseUrl;
 
 //    @Value("${redis.host}")
 //    private String redisHost;
@@ -125,10 +129,10 @@ public class AppConfig {
         };
     }
 
+
     @Bean
-    public SendGrid sendGrid(){
-        log.info("Send grid api key :{} ", apiKey);
-        return new SendGrid(apiKey);
+    public FusionAuthClient fusionAuthClient(){
+        return new FusionAuthClient(fusionAuthApiKey, fusionAuthBaseUrl);
     }
 
     @PostConstruct

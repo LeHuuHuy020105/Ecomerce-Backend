@@ -27,8 +27,7 @@ public class ProductResponse implements Serializable {
     private String coverImage;
     private List<String> imageProduct;
     private Integer soldQuantity;
-    private String address;
-    private String avgRating;
+    private Double avgRating;
     private List<AttributeResponse>attributes;
     private List<ProductVariantResponse>productVariant;
     private LocalDateTime createAt;

@@ -46,6 +46,7 @@ public class SecurityConfig {
             "/sendgrid/otp",
             "/product/list",
             "/product/detail/**",
+            "/fushionAuth/**",
             "/user/email",
             "/user/forgot-password",
             "/otp/**",

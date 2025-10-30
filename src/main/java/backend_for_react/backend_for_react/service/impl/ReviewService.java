@@ -10,6 +10,7 @@ import backend_for_react.backend_for_react.controller.response.ImageResponse;
 import backend_for_react.backend_for_react.controller.response.ReviewResponse;
 import backend_for_react.backend_for_react.exception.BusinessException;
 import backend_for_react.backend_for_react.exception.ErrorCode;
+import backend_for_react.backend_for_react.exception.MessageError;
 import backend_for_react.backend_for_react.model.*;
 import backend_for_react.backend_for_react.repository.*;
 import jakarta.persistence.EntityNotFoundException;
@@ -28,10 +29,11 @@ public class ReviewService {
     private final ReviewRepository reviewRepository;
     private final ImageReviewRepository imageReviewRepository;
     private final OrderItemRepository orderItemRepository;
+    private final ProductRepository productRepository;
     private final SecurityUtils securityUtils;
 
 
-    public Long save(ReviewCreationRequest req) {
+    public Long  save(ReviewCreationRequest req) {
         User currentUser = securityUtils.getCurrentUser();
         if (currentUser == null) {
             throw new BusinessException(ErrorCode.UNAUTHENTICATED, "You must be logged in to perform this action.");
@@ -55,13 +57,25 @@ public class ReviewService {
         review.setStatus(Status.ACTIVE);
         reviewRepository.save(review);
 
-        for(String url : req.getImageUrl()){
-            ImageReview newImageReview = new ImageReview();
-            newImageReview.setReview(review);
-            newImageReview.setStatus(Status.ACTIVE);
-            newImageReview.setUrlImage(url);
-        }
+       if(req.getImageUrl() != null){
+           for(String url : req.getImageUrl()){
+               ImageReview newImageReview = new ImageReview();
+               newImageReview.setReview(review);
+               newImageReview.setStatus(Status.ACTIVE);
+               newImageReview.setUrlImage(url);
+           }
+       }
+
+        updateProductAvgRating(review.getProduct().getId());
+
         return review.getId();
+    }
+    private void updateProductAvgRating(Long productId) {
+        Double avgRating = reviewRepository.findAverageRatingByProductId(productId);
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.BAD_REQUEST, MessageError.PRODUCT_NOT_FOUND));
+        product.setAvgRating(avgRating != null ? avgRating : 0.0);
+        productRepository.save(product);
     }
 
     @Transactional
@@ -69,6 +83,7 @@ public class ReviewService {
         Review review = reviewRepository.findById(req.getId()).orElseThrow(()->new EntityNotFoundException("Review not found"));
         review.setRating(req.getRating());
         review.setComment(req.getComment());
+        updateProductAvgRating(review.getProduct().getId());
         reviewRepository.save(review);
     }
 
@@ -98,6 +113,7 @@ public class ReviewService {
     public void delete(Long id) {
         Review review = reviewRepository.findById(id).orElseThrow(()->new EntityNotFoundException("Review not found"));
         review.setStatus(Status.INACTIVE);
+        updateProductAvgRating(review.getProduct().getId());
         reviewRepository.save(review);
     }
 

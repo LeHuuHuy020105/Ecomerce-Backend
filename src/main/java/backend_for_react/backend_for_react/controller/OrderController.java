@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -19,6 +20,38 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class OrderController {
     private final OrderService orderService;
+
+    @GetMapping("/list")
+    public ResponseEntity<Object> findAll(@RequestParam(required = false) String keyword,
+                                          @RequestParam(required = false) String sort,
+                                          @RequestParam(defaultValue = "0") int page,
+                                          @RequestParam(defaultValue = "10") int size,
+                                          @RequestParam(required = false) DeliveryStatus deliveryStatus
+    ){
+        Map<String,Object> result = new LinkedHashMap<>();
+        result.put("status", HttpStatus.OK.value());
+        result.put("message","Order list");
+        result.put("data",orderService.findAllByUser(keyword,sort,page,size,deliveryStatus));
+        return new ResponseEntity<>(result,HttpStatus.OK);
+    }
+
+    @GetMapping("/admin/list")
+    public ResponseEntity<Object> findAllByAdmin(@RequestParam(required = false) String keyword,
+                                                 @RequestParam(required = false) String sort,
+                                                 @RequestParam(defaultValue = "0") int page,
+                                                 @RequestParam(defaultValue = "10") int size,
+                                                 @RequestParam(required = false) DeliveryStatus deliveryStatus,
+                                                 @RequestParam(required = false) LocalDateTime startDate,
+                                                 @RequestParam(required = false) LocalDateTime endDate
+
+                                                 ){
+        Map<String,Object> result = new LinkedHashMap<>();
+        result.put("status", HttpStatus.OK.value());
+        result.put("message","order list");
+        result.put("data",orderService.findAllByAdmin(keyword,deliveryStatus,sort,page,size,startDate,endDate));
+        return new ResponseEntity<>(result,HttpStatus.OK);
+    }
+
 
     @PostMapping("/add")
     public ResponseEntity<Object> createOrder(@RequestBody @Valid OrderCreationRequest req){

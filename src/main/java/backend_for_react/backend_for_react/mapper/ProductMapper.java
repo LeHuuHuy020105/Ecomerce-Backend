@@ -25,7 +25,7 @@
                     .urlvideo(product.getUrlvideo())
                     .urlCoverImage(product.getUrlCoverImage())
                     .soldQuantity(product.getSoldQuantity())
-                    .avgRating(String.format("%.1f", avgRating))
+                    .avgRating(avgRating)
                     .status(product.getProductStatus())
                     .createdAt(product.getCreatedAt())
                     .updateAt(product.getUpdatedAt())

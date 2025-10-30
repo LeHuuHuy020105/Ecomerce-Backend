@@ -15,6 +15,4 @@ public class OrderItemResponse {
     ProductVariantResponse productVariantResponse;
     Integer quantity;
     Integer returnQuantity;
-    List<ReviewResponse> reviewResponses;
-
 }

@@ -18,7 +18,7 @@ import java.util.List;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class OrderResponse {
     Long id;
-    Long userId;
+    UserResponse userResponse;
     String customerName;
     String customerPhone;
     String deliveryWardName;

@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 @Data
 @Component
 public class DeliveryConfig {
-    @Value("${spring.ghn.baseUrl}")
+    @Value("${spring.ghn.baseUrlDev}")
     private String baseUrl;
 
     @Value("${spring.ghn.token}")
@@ -17,4 +17,14 @@ public class DeliveryConfig {
 
     @Value("${spring.ghn.shopId}")
     private Long shopId;
+
+    @Value("${spring.ghn.token-dev}")
+    private String tokenDev;
+
+    @Value("${spring.ghn.shopId}")
+    private Long shopIdDev;
+
+    @Value("${spring.ghn.baseUrlProd}")
+    private String baseUrlProd;
+
 }

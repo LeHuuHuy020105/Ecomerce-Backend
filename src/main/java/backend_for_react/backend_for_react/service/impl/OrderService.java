@@ -1,9 +1,6 @@
 package backend_for_react.backend_for_react.service.impl;
 
-import backend_for_react.backend_for_react.common.enums.DeliveryStatus;
-import backend_for_react.backend_for_react.common.enums.OrderAfterSaleStatus;
-import backend_for_react.backend_for_react.common.enums.PaymentStatus;
-import backend_for_react.backend_for_react.common.enums.PaymentType;
+import backend_for_react.backend_for_react.common.enums.*;
 import backend_for_react.backend_for_react.common.utils.SecurityUtils;
 import backend_for_react.backend_for_react.controller.FeeResponse;
 import backend_for_react.backend_for_react.controller.request.Order.OrderCreationRequest;
@@ -11,13 +8,12 @@ import backend_for_react.backend_for_react.controller.request.Order.OrderItem.Or
 import backend_for_react.backend_for_react.controller.request.Shipping.FeeRequest;
 import backend_for_react.backend_for_react.controller.request.Shipping.ShippingOrderItem;
 import backend_for_react.backend_for_react.controller.request.Shipping.ShippingOrderRequest;
-import backend_for_react.backend_for_react.controller.response.OrderItemResponse;
-import backend_for_react.backend_for_react.controller.response.OrderResponse;
-import backend_for_react.backend_for_react.controller.response.ProductVariantResponse;
-import backend_for_react.backend_for_react.controller.response.ShippingOrderDetailResponse;
+import backend_for_react.backend_for_react.controller.response.*;
 import backend_for_react.backend_for_react.exception.BusinessException;
 import backend_for_react.backend_for_react.exception.ErrorCode;
 import backend_for_react.backend_for_react.exception.MessageError;
+import backend_for_react.backend_for_react.mapper.ProductVariantMapper;
+import backend_for_react.backend_for_react.mapper.UserMapper;
 import backend_for_react.backend_for_react.model.*;
 import backend_for_react.backend_for_react.repository.*;
 import backend_for_react.backend_for_react.service.GhnService;
@@ -26,6 +22,10 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
@@ -35,6 +35,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static backend_for_react.backend_for_react.common.utils.ShippingHelper.*;
 import static backend_for_react.backend_for_react.mapper.OrderMapper.getOrderResponse;
@@ -56,6 +58,71 @@ public class OrderService {
     VoucherUsageRepository voucherUsageRepository;
     GhnService ghnService;
     private final UserService userService;
+
+    public PageResponse<OrderResponse> findAllByUser(String keyword, String sort, int page, int size , DeliveryStatus orderStatus ) {
+        log.info("KEYWORD : ", keyword);
+        User user = securityUtils.getCurrentUser();
+        Sort order = Sort.by(Sort.Direction.ASC, "id");
+        if (sort != null && !sort.isEmpty()) {
+            Pattern pattern = Pattern.compile("(\\w+?)(:)(.*)");
+            Matcher matcher = pattern.matcher(sort);
+            if (matcher.find()) {
+                String columnName = matcher.group(1);
+                if (matcher.group(3).equalsIgnoreCase("asc")) {
+                    order = Sort.by(Sort.Direction.ASC, columnName);
+                } else {
+                    order = Sort.by(Sort.Direction.DESC, columnName);
+                }
+            }
+        }
+        int pageNo = 0;
+        if (page > 0) {
+            pageNo = page - 1;
+        }
+        Pageable pageable = PageRequest.of(pageNo, size, order);
+        Page<Order> orders = null;
+        if (keyword == null || keyword.isEmpty()) {
+            orders = orderRepository.findAllByUserAndOrderStatus(user,orderStatus,pageable);
+        } else {
+            log.info("Keyword");
+            keyword = "%" + keyword.toLowerCase() + "%";
+            orders = orderRepository.searchByKeywordAndUser(keyword,pageable,user);
+        }
+        PageResponse response = getOrderPageResponse(pageNo, size, orders);
+        return response;
+    }
+
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('VIEW_ALL_PRODUCT')")
+    public PageResponse<OrderResponse> findAllByAdmin( String keyword,
+                                                       DeliveryStatus orderStatus,
+                                                       String sort,
+                                                       int page,
+                                                       int size,
+                                                       LocalDateTime startDate,
+                                                       LocalDateTime endDate) {
+        log.info("KEYWORD : ", keyword);
+        Sort order = Sort.by(Sort.Direction.ASC, "id");
+        if (sort != null && !sort.isEmpty()) {
+            Pattern pattern = Pattern.compile("(\\w+?)(:)(.*)");
+            Matcher matcher = pattern.matcher(sort);
+            if (matcher.find()) {
+                String columnName = matcher.group(1);
+                if (matcher.group(3).equalsIgnoreCase("asc")) {
+                    order = Sort.by(Sort.Direction.ASC, columnName);
+                } else {
+                    order = Sort.by(Sort.Direction.DESC, columnName);
+                }
+            }
+        }
+        int pageNo = 0;
+        if (page > 0) {
+            pageNo = page - 1;
+        }
+        Pageable pageable = PageRequest.of(pageNo, size, order);
+        String search = (keyword == null || keyword.isEmpty()) ? "" : keyword.trim().toLowerCase();
+        Page<Order> orders = orderRepository.searchByKeywordAndFilter(search, orderStatus, startDate, endDate, pageable);
+        return getOrderPageResponse(pageNo, size, orders);
+    }
 
     @Transactional(rollbackFor = Exception.class)
     public Long save(OrderCreationRequest req) {
@@ -104,6 +171,8 @@ public class OrderService {
             // Tạo order item
             OrderItem orderItem = new OrderItem();
             orderItem.setOrder(newOrder);
+            orderItem.setListPrice(productVariant.getPrice());
+            orderItem.setNameProduct(productVariant.getProduct().getName());
             orderItem.setProductVariant(productVariant);
             orderItem.setQuantity(orderItemReq.getQuantity());
 
@@ -288,5 +357,54 @@ public class OrderService {
                 log.error("Lỗi khi tự động xác nhận đơn hàng id={}: {}", order.getId(), e.getMessage());
             }
         }
+    }
+
+    private OrderItemResponse getOrderItemResponse(OrderItem orderItem) {
+        return OrderItemResponse.builder()
+                .orderItemId(orderItem.getId())
+                .quantity(orderItem.getQuantity())
+                .returnQuantity(orderItem.getReturnedQuantity())
+                .productVariantResponse(ProductVariantMapper.getProductVariantResponse(orderItem.getProductVariant()))
+                .build();
+    }
+
+    private OrderResponse getOrderResponse(Order order) {
+        List<OrderItemResponse> orderItemResponses = order.getOrderItems().stream()
+                .map(orderItem -> getOrderItemResponse(orderItem))
+                .toList();
+        return OrderResponse.builder()
+                .id(order.getId())
+                .userResponse(UserMapper.getUserResponse(order.getUser()))
+                .customerName(order.getCustomerName())
+                .customerPhone(order.getCustomerPhone())
+                .deliveryWardName(order.getDeliveryWardName())
+                .deliveryDistrictId(order.getDeliveryDistrictId())
+                .deliveryProvinceId(order.getDeliveryProvinceId())
+                .deliveryDistrictName(order.getDeliveryDistrictName())
+                .deliveryProvinceName(order.getDeliveryProvinceName())
+                .deliveryWardCode(order.getDeliveryWardCode())
+                .deliveryAddress(order.getDeliveryAddress())
+                .serviceDeliveryId(order.getServiceDeliveryId())
+                .serviceDeliveryId(order.getServiceDeliveryId())
+                .serviceDeliveryName(order.getServiceDeliveryName())
+                .totalAmount(order.getTotalAmount())
+                .originalOrderAmount(order.getOriginalOrderAmount())
+                .deliveryStatus(order.getOrderStatus())
+                .paymentStatus(order.getPaymentStatus())
+                .paymentType(order.getPaymentType())
+                .build();
+    }
+
+    private PageResponse<OrderResponse> getOrderPageResponse(int page, int size, Page<Order> orders) {
+        List<OrderResponse> orderResponseList = orders.stream()
+                .map(order -> getOrderResponse(order))
+                .toList();
+        PageResponse<OrderResponse> response = new PageResponse<>();
+        response.setPageNumber(page + 1);
+        response.setPageSize(size);
+        response.setTotalElements(orders.getTotalElements());
+        response.setTotalPages(orders.getTotalPages());
+        response.setData(orderResponseList);
+        return response;
     }
 }
