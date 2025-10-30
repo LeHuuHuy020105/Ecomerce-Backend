@@ -10,10 +10,5 @@ import java.util.List;
 
 @Data
 public class ProductVariantUpdateRequest implements Serializable {
-    private Long id;
-    private String size;
-    private String color;
-    private Integer stock;
-    private List<Long> deletedImageIds;
-    private List<MultipartFile>newImages;
+    Long attributeValueId;
 }

@@ -3,6 +3,7 @@ package backend_for_react.backend_for_react.service.impl;
 import backend_for_react.backend_for_react.common.enums.ProductStatus;
 import backend_for_react.backend_for_react.common.enums.Status;
 import backend_for_react.backend_for_react.common.utils.CloudinaryHelper;
+import backend_for_react.backend_for_react.common.utils.TextUtils;
 import backend_for_react.backend_for_react.controller.request.Attribute.AttributeCreationRequest;
 import backend_for_react.backend_for_react.controller.request.Product.ProductCreationRequest;
 import backend_for_react.backend_for_react.controller.request.Product.ProductUpdateRequest;
@@ -359,9 +360,10 @@ public class ProductService {
     /**
      * Tạo SKU tự động
      */
-    private String generateSku(Product product, ProductVariantCreationRequest request) {
+    public static String generateSku(Product product, ProductVariantCreationRequest request) {
         log.info("ProductVariantCreationRequest : ", request);
-        String productCode = product.getName().substring(0, 3).toUpperCase();
+        String name = TextUtils.removeVietnameseAccent(product.getName());
+        String productCode = name.substring(0, 3).toUpperCase();
         String variantCode = request.getVariantAttributes().stream()
                 .sorted(Comparator.comparing(VariantAttributeRequest::getAttribute))
                 .map(c -> c.getValue().substring(0, 1))

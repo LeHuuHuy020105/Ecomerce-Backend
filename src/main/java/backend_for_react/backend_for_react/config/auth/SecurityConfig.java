@@ -47,6 +47,8 @@ public class SecurityConfig {
             "/product/list",
             "/product/detail/**",
             "/fushionAuth/**",
+            "/category/list",
+            "/category/all",
             "/user/email",
             "/user/forgot-password",
             "/otp/**",

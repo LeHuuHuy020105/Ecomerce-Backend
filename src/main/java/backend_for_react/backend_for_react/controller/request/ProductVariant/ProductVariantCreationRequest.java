@@ -10,6 +10,7 @@ import java.util.List;
 
 @Data
 public class ProductVariantCreationRequest implements Serializable {
+    private Long productId;
 
     @NotNull(message = "Weight must not be null")
     @Positive(message = "Weight must be greater than 0")
