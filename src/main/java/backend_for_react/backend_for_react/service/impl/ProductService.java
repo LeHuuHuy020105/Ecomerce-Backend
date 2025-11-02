@@ -5,6 +5,7 @@ import backend_for_react.backend_for_react.common.enums.Status;
 import backend_for_react.backend_for_react.common.utils.CloudinaryHelper;
 import backend_for_react.backend_for_react.common.utils.TextUtils;
 import backend_for_react.backend_for_react.controller.request.Attribute.AttributeCreationRequest;
+import backend_for_react.backend_for_react.controller.request.AttributeValue.AttributeValueCreationRequest;
 import backend_for_react.backend_for_react.controller.request.Product.ProductCreationRequest;
 import backend_for_react.backend_for_react.controller.request.Product.ProductUpdateRequest;
 import backend_for_react.backend_for_react.controller.request.ProductVariant.ProductVariantCreationRequest;
@@ -13,6 +14,7 @@ import backend_for_react.backend_for_react.controller.request.VariantQuantityUpd
 import backend_for_react.backend_for_react.controller.response.*;
 import backend_for_react.backend_for_react.exception.BusinessException;
 import backend_for_react.backend_for_react.exception.ErrorCode;
+import backend_for_react.backend_for_react.exception.MessageError;
 import backend_for_react.backend_for_react.mapper.ProductVariantMapper;
 import backend_for_react.backend_for_react.model.*;
 import backend_for_react.backend_for_react.repository.*;
@@ -191,27 +193,48 @@ public class ProductService {
     @Transactional(rollbackFor = Exception.class)
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('UPDATE_PRODUCT')")
     public void update(ProductUpdateRequest req) {
-        Product product = productRepository.findById(req.getId()).orElseThrow(() -> new EntityNotFoundException("Product not found"));
+        Product product = productRepository.findByIdAndProductStatus(req.getId(), ProductStatus.ACTIVE).orElseThrow(() -> new EntityNotFoundException("Product not found"));
         if (req.getCategoryId() != null) {
-            Category category = categoryRepository.findById(req.getCategoryId()).orElseThrow(() -> new EntityNotFoundException("Category not found"));
+            Category category = categoryRepository.findByIdAndStatus(req.getCategoryId(), Status.ACTIVE).orElseThrow(() -> new EntityNotFoundException("Category not found"));
             product.setCategory(category);
         }
         if (req.getDescription() != null) product.setDescription(req.getDescription());
-        if (req.getVideo() != null) product.setUrlvideo(req.getVideo());
-        if (req.getCoverImage() != null) product.setUrlCoverImage(req.getCoverImage());
+        if(req.getName() != null) product.setName(req.getName());
+        if(req.getSalePrice() != null) product.setSalePrice(req.getSalePrice());
+        if(req.getListPrice() !=null) product.setListPrice(req.getListPrice());
+
+        if (req.isRemoveVideo()) {
+            product.setUrlvideo(null);
+        } else if (req.getVideo() != null) {
+            product.setUrlvideo(req.getVideo());
+        }
+
+
+        if (req.isRemoveCoverImage()) {
+            product.setUrlCoverImage(null);
+        } else if (req.getCoverImage() != null) {
+            product.setUrlCoverImage(req.getCoverImage());
+        }
+
         productRepository.save(product);
     }
 
     @Transactional(rollbackFor = Exception.class)
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('DELETE_PRODUCT')")
     public void delete(Long id) {
-        Product product = productRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Product not found"));
+        Product product = productRepository.findByIdAndProductStatus(id,ProductStatus.ACTIVE).orElseThrow(() -> new EntityNotFoundException("Product not found"));
         product.setProductStatus(ProductStatus.INACTIVE);
         productRepository.save(product);
     }
 
 
     public ProductResponse getProductById(Long id) {
+        Product product = productRepository.findByIdAndProductStatus(id,ProductStatus.ACTIVE).orElseThrow(() -> new EntityNotFoundException("Product not found"));
+        return getProductDetailResponse(product);
+    }
+
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('VIEW__DETAIL_PRODUCT')")
+    public ProductResponse getProductByIdForAdmin(Long id) {
         Product product = productRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Product not found"));
         return getProductDetailResponse(product);
     }
@@ -222,8 +245,8 @@ public class ProductService {
     private Product createBaseProduct(ProductCreationRequest req) {
         log.info("REQ: ", req);
         // Tìm danh mục
-        Category category = categoryRepository.findById(req.getCategoryId())
-                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy danh mục"));
+        Category category = categoryRepository.findByIdAndStatus(req.getCategoryId(),Status.ACTIVE)
+                .orElseThrow(() -> new EntityNotFoundException("Category not found"));
 
         // Tạo sản phẩm chính
         Product newProduct = Product.builder()
@@ -256,14 +279,12 @@ public class ProductService {
      * Xử lý tạo các phân loại (attributes) và giá trị của chúng
      */
     private Attribute processSingleAttribute(Product product, AttributeCreationRequest attributeRequest) {
-        Attribute attribute = attributeRepository.findByName(attributeRequest.getName());
-        if (attribute == null) {
-            attribute = Attribute.builder()
+           Attribute attribute = Attribute.builder()
                     .product(product)
+                    .status(Status.ACTIVE)
                     .name(attributeRequest.getName())
                     .build();
             attributeRepository.save(attribute); // Gán attribute từ newAttribute
-        }
         return attribute;
     }
 
@@ -299,7 +320,7 @@ public class ProductService {
                     .length(variantRequest.getLength())
                     .weight(variantRequest.getWeight())
                     .price(variantRequest.getPrice())
-                    .quantity(variantRequest.getQuantity())
+                    .quantity(0)
                     .status(Status.ACTIVE)
                     .sku(generateSku(product, variantRequest))
                     .build();
@@ -378,7 +399,7 @@ public class ProductService {
     public void updateVariantQuantity(List<VariantQuantityUpdateRequest> req, Long productId) {
         for (VariantQuantityUpdateRequest updateRequest : req) {
             // 1. Tìm product
-            Product product = productRepository.findById(productId)
+            Product product = productRepository.findByIdAndProductStatus(productId,ProductStatus.ACTIVE)
                     .orElseThrow(() -> new EntityNotFoundException("Product not found"));
 
             // 2. Tìm tất cả biến thể của product
@@ -407,6 +428,88 @@ public class ProductService {
                 )
         );
     }
+
+
+    @Transactional
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('UPDATE_PRODUCT_ATTRIBUTE')")
+    public void updateAttribute(Long productId, Long attributeId, AttributeCreationRequest req) {
+        Attribute attribute = attributeRepository.findByIdAndStatus(attributeId,Status.ACTIVE)
+                .orElseThrow(() -> new EntityNotFoundException("Attribute not found"));
+        if (!attribute.getProduct().getId().equals(productId))
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Attribute not part of product");
+
+        attribute.setName(req.getName());
+        attributeRepository.save(attribute);
+    }
+
+    @Transactional
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('DELETE_PRODUCT_ATTRIBUTE')")
+    public void deleteAttribute(Long productId, Long attributeId) {
+        Attribute attribute = attributeRepository.findByIdAndStatus(attributeId,Status.ACTIVE)
+                .orElseThrow(() -> new EntityNotFoundException("Attribute not found"));
+        if (!attribute.getProduct().getId().equals(productId))
+            throw new BusinessException(ErrorCode.UNAUTHORIZED, "Attribute not part of product");
+
+        attribute.setStatus(Status.INACTIVE);
+        // Cập nhật các value bên trong
+        List<AttributeValue> values = attributeValueRepository.findAllByAttribute(attribute);
+        values.forEach(v -> v.setStatus(Status.INACTIVE));
+        attributeRepository.save(attribute);
+    }
+
+    @Transactional
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('UPDATE_PRODUCT_VARIANT')")
+    public void updateVariant(Long productId, Long variantId, ProductVariantCreationRequest req) {
+        ProductVariant variant = productVariantRepository.findByIdAndStatus(variantId,Status.ACTIVE)
+                .orElseThrow(() -> new EntityNotFoundException("Variant not found"));
+        if (!variant.getProduct().getId().equals(productId))
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Variant not part of product");
+
+        if(req.getPrice() != null) variant.setPrice(req.getPrice());
+        if(req.getWeight() != null) variant.setWeight(req.getWeight());
+        if(req.getHeight() != null) variant.setHeight(req.getHeight());
+        if(req.getWidth() != null) variant.setWidth(req.getWidth());
+        if(req.getLength() != null) variant.setLength(req.getLength());
+        productVariantRepository.save(variant);
+    }
+
+    @Transactional
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('UPDATE_PRODUCT_VARIANT')")
+    public void updateAttributeValue(Long productId, Long attributeValueId, AttributeValueCreationRequest req) {
+        AttributeValue attributeValue = attributeValueRepository.findByIdAndStatus(attributeValueId,Status.ACTIVE)
+                .orElseThrow(() -> new BusinessException(ErrorCode.BAD_REQUEST, "Attribute value not found"));
+        if (!attributeValue.getAttribute().getProduct().getId().equals(productId))
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Variant not part of product");
+
+        if(req.getValue() != null) attributeValue.setValue(req.getValue());
+        if(req.getImage() != null) attributeValue.setUrlImage(req.getImage());
+        attributeValueRepository.save(attributeValue);
+    }
+
+    @Transactional
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('DELETE_PRODUCT_VARIANT')")
+    public void deleteAttributeValue(Long productId, Long attributeValueId) {
+        AttributeValue attributeValue = attributeValueRepository.findByIdAndStatus(attributeValueId,Status.ACTIVE)
+                .orElseThrow(() -> new BusinessException(ErrorCode.BAD_REQUEST, "Attribute value not found"));
+        if (!attributeValue.getAttribute().getProduct().getId().equals(productId))
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Variant không thuộc sản phẩm");
+
+        attributeValue.setStatus(Status.INACTIVE);
+        attributeValueRepository.save(attributeValue);
+    }
+
+    @Transactional
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('DELETE_PRODUCT_VARIANT')")
+    public void deleteVariant(Long productId, Long variantId) {
+        ProductVariant variant = productVariantRepository.findByIdAndStatus(variantId,Status.ACTIVE)
+                .orElseThrow(() -> new EntityNotFoundException("Variant not found"));
+        if (!variant.getProduct().getId().equals(productId))
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Variant không thuộc sản phẩm");
+
+        variant.setStatus(Status.INACTIVE);
+        productVariantRepository.save(variant);
+    }
+
 
     /**
      * Xây dựng response

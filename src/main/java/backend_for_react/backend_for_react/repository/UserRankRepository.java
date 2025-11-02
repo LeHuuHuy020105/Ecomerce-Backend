@@ -1,6 +1,7 @@
 package backend_for_react.backend_for_react.repository;
 
 import backend_for_react.backend_for_react.common.enums.Rank;
+import backend_for_react.backend_for_react.common.enums.Status;
 import backend_for_react.backend_for_react.model.User;
 import backend_for_react.backend_for_react.model.UserRank;
 import backend_for_react.backend_for_react.model.Voucher;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Repository;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
+import java.util.Stack;
 
 @Repository
 public interface UserRankRepository extends JpaRepository<UserRank, Long> {
@@ -31,4 +33,6 @@ public interface UserRankRepository extends JpaRepository<UserRank, Long> {
     boolean existsByName(String name);
 
     Optional<UserRank> findByName(String name);
+
+    Optional<UserRank> findByIdAndStatus(Long id, Status status);
 }

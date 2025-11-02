@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Repository
 public interface ImportProductRepository
@@ -35,4 +36,6 @@ public interface ImportProductRepository
             "JOIN pv.product p " +
             "WHERE pv.sku LIKE %:keyword% OR p.name LIKE %:keyword%")
     Page<ImportProduct> findBySkuOrProductName(@Param("keyword") String keyword, Pageable pageable);
+
+    Optional<ImportProduct> findByIdAndStatus(Long id, DeliveryStatus status);
 }

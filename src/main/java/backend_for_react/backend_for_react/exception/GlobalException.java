@@ -12,6 +12,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
@@ -140,6 +141,28 @@ public class GlobalException {
                 .error("Internal Server Error")
                 .message(ex.getMessage())
                 .build();
+    }
+
+    @ExceptionHandler(HandlerMethodValidationException.class)
+    public ResponseEntity<ErrorResponse> handleHandlerMethodValidation(HandlerMethodValidationException ex, HttpServletRequest request) {
+        ErrorCode errorCode = ErrorCode.INVALID_KEY;
+        log.warn("HandlerMethodValidationException occurred");
+
+        // Lấy tất cả message lỗi từ validation mới
+        List<String> errorMessages = ex.getAllErrors().stream()
+                .map(error -> error.getDefaultMessage())
+                .toList();
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(new Date())
+                .status(errorCode.getHttpStatus().value())
+                .path(request.getRequestURI())
+                .error(errorCode.getHttpStatus().getReasonPhrase())
+                .message(String.join(", ", errorMessages))
+                .details(errorMessages)
+                .build();
+
+        return new ResponseEntity<>(errorResponse, errorCode.getHttpStatus());
     }
 
     private String processValidationError(ObjectError error) {

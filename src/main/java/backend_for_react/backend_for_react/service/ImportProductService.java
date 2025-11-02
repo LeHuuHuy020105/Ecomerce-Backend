@@ -27,6 +27,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -52,6 +53,7 @@ public class ImportProductService {
     SupplierService supplierService;
     ProductService productServiceImpl;
 
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('VIEW_IMPORT_PRODUCT')")
     public PageResponse<ImportProductResponse> findAll(
             String keyword, String sort, int page, int size,
             String timeRange, LocalDateTime startDate, LocalDateTime endDate,
@@ -135,8 +137,9 @@ public class ImportProductService {
 
 
     @Transactional
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('ADD_IMPORT_PRODUCT')")
     public ImportProductResponse save (ImportProductCreationRequest request){
-        Supplier supplier = supplierRepository.findById(request.getSupplierId()).orElseThrow(()-> new EntityNotFoundException("Supplier not found"));
+        Supplier supplier = supplierRepository.findByIdAndStatus(request.getSupplierId(),Status.ACTIVE).orElseThrow(()-> new EntityNotFoundException("Supplier not found"));
 
         ImportProduct importProduct = new ImportProduct();
         importProduct.setSupplier(supplier);
@@ -148,7 +151,7 @@ public class ImportProductService {
         BigDecimal totalAmount = BigDecimal.ZERO;
 
         for(ImportDetailCreationRequest detailReq : request.getImportDetails()){
-            ProductVariant productVariant = productVariantRepository.findById(detailReq.getProductVariantId())
+            ProductVariant productVariant = productVariantRepository.findByIdAndStatus(detailReq.getProductVariantId(),Status.ACTIVE)
                     .orElseThrow(()-> new EntityNotFoundException("ProductVariant not found"));
 
             ImportDetail importDetail = new ImportDetail();
@@ -169,6 +172,8 @@ public class ImportProductService {
        importProductRepository.save(importProduct);
        return getImportProductResponse(importProduct);
     }
+
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('VIEW_DETAIL_IMPORT_PRODUCT')")
     public ImportProductResponse getImportProductById(Long importProductId){
         ImportProduct importProduct = importProductRepository.findById(importProductId)
                 .orElseThrow(()-> new EntityNotFoundException("Import not found"));
@@ -189,15 +194,12 @@ public class ImportProductService {
      * Cập nhật kho
      */
     @Transactional
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('CONFIRM_IMPORT_PRODUCT')")
     public void confirmImport(Long importId){
         // TÌM VÀ KIỂM TRA TRẠNG THÁI
 
         ImportProduct importProduct = importProductRepository.findById(importId)
                 .orElseThrow(()-> new EntityNotFoundException("Import not found"));
-
-        if (importProduct.getStatus() != DeliveryStatus.PENDING) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST,"Chỉ có thể xác nhận phiếu nhập ở trạng thái PENDING");
-        }
 
         // DUYỆT QUA TỪNG CHI TIẾT VÀ CẬP NHẬT SỐ LƯỢNG TỒN KHO
         for (ImportDetail detail : importProduct.getImportDetails()) {
@@ -212,13 +214,14 @@ public class ImportProductService {
     }
 
     @Transactional
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('CANCEL_IMPORT_PRODUCT')")
     public void cancelImport(Long importId) {
         ImportProduct importProduct = importProductRepository.findById(importId)
                 .orElseThrow(() -> new EntityNotFoundException("Import not found"));
 
         // Chỉ hủy được phiếu ở trạng thái DRAFT
         if (importProduct.getStatus() != DeliveryStatus.PENDING) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST,"Chỉ có thể hủy phiếu nhập ở trạng thái DRAFT");
+            throw new BusinessException(ErrorCode.BAD_REQUEST,"You just cancel import product with status PENDING");
         }
 
         importProduct.setStatus(DeliveryStatus.CANCELLED);
@@ -230,13 +233,14 @@ public class ImportProductService {
      *
      */
     @Transactional
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('DELETE_IMPORT_PRODUCT_DETAIL')")
     public void removeDetailFromPendingImport(Long importId, Long detailId) {
         // 1. Tìm phiếu nhập và kiểm tra trạng thái DRAFT
         ImportProduct importProduct = importProductRepository.findById(importId)
                 .orElseThrow(() -> new EntityNotFoundException("Import not found"));
 
         if (importProduct.getStatus() != DeliveryStatus.PENDING) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST,"Chỉ có thể xóa chi tiết khỏi phiếu nháp (PENDDING)");
+            throw new BusinessException(ErrorCode.BAD_REQUEST,"You just cancel import product with status PENDING");
         }
 
         // 2. Tìm chi tiết cần xóa
@@ -245,7 +249,7 @@ public class ImportProductService {
 
         // 3. Kiểm tra chi tiết có thuộc về phiếu nhập này không
         if (!detailToRemove.getImportProduct().getId().equals(importId)) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST,"Chi tiết không thuộc về phiếu nhập này");
+            throw new BusinessException(ErrorCode.BAD_REQUEST,"Import detail not part of import");
         }
 
         // 4. THỰC HIỆN XÓA MỀM: Đổi trạng thái thành INACTIVE
@@ -261,14 +265,18 @@ public class ImportProductService {
      *
      */
     @Transactional
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('UPDATE_QUANTITY_IMPORT_PRODUCT')")
     public void updateQuantityDetailFromPendingImport (List<UpdateImportDetailRequest> request , Long  importId) {
         ImportProduct importProduct = importProductRepository.findById(importId)
                 .orElseThrow(() -> new EntityNotFoundException("Import not found"));
+        if(importProduct.getStatus() != DeliveryStatus.PENDING) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Import not in PENDING");
+        }
         for (UpdateImportDetailRequest detail : request) {
             ImportDetail changeDetail = importDetailRepository.findById(detail.getImportDetailId())
                     .orElseThrow(() -> new EntityNotFoundException("Import detail not found"));
             if (!changeDetail.getImportProduct().getId().equals(importId)) {
-                throw new BusinessException(ErrorCode.BAD_REQUEST,"Chi tiết không thuộc về phiếu nhập này");
+                throw new BusinessException(ErrorCode.BAD_REQUEST,"Import detail not part of this import");
             }
             changeDetail.setQuantity(detail.getQuantity());
             importDetailRepository.save(changeDetail);

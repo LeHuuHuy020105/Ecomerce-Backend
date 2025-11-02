@@ -20,6 +20,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
@@ -35,6 +36,7 @@ import java.util.regex.Pattern;
 public class SupplierService {
     SupplierRepository supplierRepository;
 
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('VIEW_ALL_SUPPLIER')")
     public PageResponse<SupplierResponse> findAll(String keyword, String sort, int page, int size) {
         Sort order = Sort.by(Sort.Direction.ASC, "id");
         if (sort != null && !sort.isEmpty()) {
@@ -56,16 +58,17 @@ public class SupplierService {
         Pageable pageable = PageRequest.of(pageNo, size, order);
         Page<Supplier> suppliers = null;
         if (keyword == null || keyword.isEmpty()) {
-            suppliers = supplierRepository.findAllByStatus(Status.ACTIVE,pageable);
+            suppliers = supplierRepository.findAll(pageable);
         } else {
             keyword = "%" + keyword.toLowerCase() + "%";
-            suppliers = supplierRepository.searchByKeyword(keyword,Status.ACTIVE,pageable);
+            suppliers = supplierRepository.searchByKeyword(keyword,pageable);
         }
         PageResponse response = getUserPageResponse(pageNo, size, suppliers);
         return response;
     }
 
     @Transactional
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('ADD_SUPPLIER')")
     public void save(SupplierCreationRequest request){
         Supplier supplier= Supplier.builder()
                 .name(request.getName())
@@ -77,8 +80,9 @@ public class SupplierService {
     }
 
     @Transactional
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('UPDATE_SUPPLIER')")
     public void update (SupplierUpdateRequest request){
-        Supplier supplier = supplierRepository.findById(request.getId()).orElseThrow(()-> new EntityNotFoundException("Supplier not found"));
+        Supplier supplier = supplierRepository.findByIdAndStatus(request.getId(),Status.ACTIVE).orElseThrow(()-> new EntityNotFoundException("Supplier not found"));
         if(request.getName() != null){
             supplier.setName(request.getName());
         }
@@ -92,13 +96,15 @@ public class SupplierService {
     }
 
     @Transactional
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('DELETE_SUPPLIER')")
     public void delete(Long id){
-        Supplier supplier = supplierRepository.findById(id).orElseThrow(()-> new EntityNotFoundException("Supplier not found"));
+        Supplier supplier = supplierRepository.findByIdAndStatus(id,Status.ACTIVE).orElseThrow(()-> new EntityNotFoundException("Supplier not found"));
         supplier.setStatus(Status.INACTIVE);
         supplierRepository.save(supplier);
     }
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('VIEW_DETAIL_SUPPLIER')")
     public SupplierResponse getSupplierById(Long id){
-        Supplier supplier = supplierRepository.findById(id).orElseThrow(()-> new EntityNotFoundException("Supplier not found"));
+        Supplier supplier = supplierRepository.findByIdAndStatus(id,Status.ACTIVE).orElseThrow(()-> new EntityNotFoundException("Supplier not found"));
         return getSupplierResponse(supplier);
     }
     public SupplierResponse getSupplierResponse(Supplier supplier) {

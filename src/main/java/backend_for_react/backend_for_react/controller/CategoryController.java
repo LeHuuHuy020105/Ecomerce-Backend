@@ -4,6 +4,7 @@ import backend_for_react.backend_for_react.controller.request.Category.CategoryC
 import backend_for_react.backend_for_react.controller.request.Category.CategoryUpdateRequest;
 import backend_for_react.backend_for_react.controller.request.Category.MoveCategoryRequest;
 import backend_for_react.backend_for_react.service.CategoryService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -43,7 +44,7 @@ public class CategoryController {
 
 
     @PostMapping("/add")
-    public ResponseEntity<Object> createCategory(@RequestBody List<CategoryCreationRequest> req){
+    public ResponseEntity<Object> createCategory(@RequestBody List<@Valid CategoryCreationRequest> req){
         categoryService.save(req);
         return new ResponseEntity<>("",HttpStatus.OK);
     }

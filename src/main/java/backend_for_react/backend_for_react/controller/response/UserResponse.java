@@ -7,6 +7,7 @@ import lombok.experimental.FieldDefaults;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Set;
 
 @Data
@@ -23,6 +24,7 @@ public class UserResponse implements Serializable {
     String email;
     String phone;
     String avatar;
+    List<AddressResponse> addressResponses;
     BigDecimal totalSpent;
     UserRankResponse userRankResponse;
     Set<RoleResponse>roles;

@@ -8,6 +8,7 @@ import backend_for_react.backend_for_react.model.User;
 import backend_for_react.backend_for_react.model.UserHasAddress;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 public class UserMapper {
@@ -30,6 +31,9 @@ public class UserMapper {
     }
 
     public static UserResponse getPublicUserResponse(User user) {
+        List<AddressResponse> addressResponses  = user.getUserHasAddresses().stream()
+                .map(UserMapper::getAddressResponse)
+                .toList();
         return UserResponse.builder()
                 .id(user.getId())
                 .userName(user.getUsername())
@@ -38,6 +42,7 @@ public class UserMapper {
                 .dateOfBirth(user.getDateOfBirth())
                 .email(user.getEmail())
                 .avatar(user.getAvatarImage())
+                .addressResponses(addressResponses)
                 .build();
     }
 
@@ -52,6 +57,7 @@ public class UserMapper {
                 .wardId(userHasAddress.getAddress().getWardId())
                 .provinceId(userHasAddress.getAddress().getProvinceId())
                 .addressType(userHasAddress.getAddressType())
+                .isDefaultAddress(userHasAddress.getIsDefault())
                 .status(userHasAddress.getStatus())
                 .build();
     }

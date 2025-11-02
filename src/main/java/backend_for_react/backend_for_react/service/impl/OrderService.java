@@ -157,7 +157,7 @@ public class OrderService {
         List<OrderItem> orderItems = new ArrayList<>();
 
         for (OrderItemCreationRequest orderItemReq : req.getOrderItems()) {
-            ProductVariant productVariant = productVariantRepository.findById(orderItemReq.getProductVariantId())
+            ProductVariant productVariant = productVariantRepository.findByIdAndStatus(orderItemReq.getProductVariantId(), Status.ACTIVE)
                     .orElseThrow(() -> new BusinessException(ErrorCode.NOT_EXISTED, MessageError.PRODUCT_VARIANT_NOT_FOUND));
 
             if (orderItemReq.getQuantity() > productVariant.getQuantity()) {
@@ -171,8 +171,9 @@ public class OrderService {
             // Tạo order item
             OrderItem orderItem = new OrderItem();
             orderItem.setOrder(newOrder);
-            orderItem.setListPrice(productVariant.getPrice());
-            orderItem.setNameProduct(productVariant.getProduct().getName());
+            orderItem.setListPriceSnapShot(productVariant.getPrice());
+            orderItem.setNameProductSnapShot(productVariant.getProduct().getName());
+            orderItem.setVariantAttributesSnapshot(ProductVariantMapper.buildVariantName(productVariant));
             orderItem.setProductVariant(productVariant);
             orderItem.setQuantity(orderItemReq.getQuantity());
 
@@ -201,7 +202,7 @@ public class OrderService {
         Voucher voucher = null;
 
         if (req.getVoucherId() != null) {
-            voucher = voucherRepository.findById(req.getVoucherId())
+            voucher = voucherRepository.findByIdAndStatus(req.getVoucherId(),VoucherStatus.ACTIVE)
                     .orElseThrow(() -> new BusinessException(ErrorCode.BAD_REQUEST, "Voucher not found"));
 
             voucherService.validateVoucherWithOderAmount(voucher, subTotal);
@@ -282,7 +283,7 @@ public class OrderService {
     public void updateSoldQuantity(List<OrderItem> orderItems) {
         for (OrderItem orderItem : orderItems) {
             ProductVariant productVariant = orderItem.getProductVariant();
-            Product product = productRepository.findById(productVariant.getProduct().getId())
+            Product product = productRepository.findByIdAndProductStatus(productVariant.getProduct().getId(),ProductStatus.ACTIVE)
                     .orElseThrow(() -> new BusinessException(ErrorCode.NOT_EXISTED, MessageError.PRODUCT_NOT_FOUND));
             product.setSoldQuantity(product.getSoldQuantity() + orderItem.getQuantity());
             productRepository.save(product);

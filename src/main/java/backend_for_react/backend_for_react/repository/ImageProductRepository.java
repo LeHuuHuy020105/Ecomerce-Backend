@@ -15,8 +15,9 @@ public interface ImageProductRepository extends JpaRepository<ImageProduct,Long>
     List<ImageProduct> findAllByStatusAndProduct(Status status, Product product);
 
     // Xóa nhiều ảnh cùng lúc
-    @Modifying
-    @Query("UPDATE ImageProduct ip set ip.status='INACTIVE' WHERE ip.product.id = :productId AND ip.url IN :urls")
-    void deleteAllByProductIdAndUrls(@Param("productId") Long productId,
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE ImageProduct ip SET ip.status = 'INACTIVE' WHERE ip.product = :product AND ip.url IN :urls")
+    void deleteAllByProductIdAndUrls(@Param("product") Product product,
                                      @Param("urls") List<String> urls);
+
 }

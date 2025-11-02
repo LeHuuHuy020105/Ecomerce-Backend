@@ -9,9 +9,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/role")
@@ -22,13 +25,17 @@ public class RoleController {
     RoleService roleService;
 
     @GetMapping("/list")
-    public ApiResponse<List<RoleResponse>> findAll(){
-        List<RoleResponse> result = roleService.findAll();
-        return ApiResponse.<List<RoleResponse>>builder()
-                .status(HttpStatus.OK.value())
-                .message("Role list")
-                .data(result)
-                .build();
+    public ResponseEntity<Object> findAll(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String sort,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("status", HttpStatus.OK.value());
+        result.put("message", "role list");
+        result.put("data", roleService.findAll(keyword, sort, page, size));
+        return new ResponseEntity<>(result, HttpStatus.OK);
     }
 
     @PostMapping("/add")

@@ -113,7 +113,7 @@ public class UserService {
 
         Set<Role> roles = new HashSet<>();
         for(Long roleId : req.getRoleId()){
-            Role role = roleRepository.findById(roleId)
+            Role role = roleRepository.findByIdAndStatus(roleId,Status.ACTIVE)
                     .orElseThrow(()-> new BusinessException(ErrorCode.NOT_EXISTED , MessageError.ROLE_NOT_FOUND));
             roles.add(role);
         }
@@ -169,7 +169,7 @@ public class UserService {
     @Transactional(rollbackFor = Exception.class)
     public void forgotPassword(ForgotPasswordRequest req , String resetToken) {
         log.info("Forgot password");
-        User user = userRepository.findById(req.getUserId())
+        User user = userRepository.findByIdAndStatus(req.getUserId(), UserStatus.ACTIVE)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
         if(!user.getEmailVerified()){
             throw new BusinessException(ErrorCode.BAD_REQUEST,"Email not verified");
@@ -188,7 +188,7 @@ public class UserService {
 
     @Transactional
     public void verifyAccount(Long userId, String resetToken) {
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByIdAndStatus(userId,UserStatus.ACTIVE)
                 .orElseThrow(() -> new BusinessException(ErrorCode.EXISTED,MessageError.USER_NOT_FOUND));
         boolean verify = otpService.verifyResetToken(userId , resetToken);
         if(verify){
@@ -232,7 +232,7 @@ public class UserService {
     @Transactional(rollbackFor = Exception.class)
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('DELETE_USER')")
     public void delete(Long id) {
-        User user = userRepository.findById(id)
+        User user = userRepository.findByIdAndStatus(id,UserStatus.ACTIVE)
                 .orElseThrow(() -> new EntityNotFoundException(MessageError.USER_NOT_FOUND));
         user.setStatus(UserStatus.INACTIVE);
         userRepository.delete(user);
@@ -241,7 +241,7 @@ public class UserService {
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('VIEW_DETAIL_USER')")
     public UserResponse getUserById(Long id) {
         log.info("Get user by Id");
-        User user = userRepository.findById(id)
+        User user = userRepository.findByIdAndStatus(id,UserStatus.ACTIVE)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_EXISTED,MessageError.USER_NOT_FOUND));
         UserResponse userResponse = UserMapper.getUserResponse(user);
         return userResponse;
@@ -283,7 +283,7 @@ public class UserService {
     @Transactional(rollbackFor = Exception.class)
     public void setDefaultAddress(Long id) {
         User user = securityUtils.getCurrentUser();
-        UserHasAddress userHasAddress = userHasAddressRepository.findByIdAndUser(id,user)
+        UserHasAddress userHasAddress = userHasAddressRepository.findByIdAndUserAndStatus(id,user,Status.ACTIVE)
                 .orElseThrow(()-> new BusinessException(ErrorCode.BAD_REQUEST,"Address not found or not yours"));
 
         userHasAddressRepository.updateAllIsDefaultFalse(user.getId());
@@ -294,7 +294,7 @@ public class UserService {
     @Transactional(rollbackFor = Exception.class)
     public void deleteAddress(Long id) {
         User user = securityUtils.getCurrentUser();
-        UserHasAddress userHasAddress = userHasAddressRepository.findByIdAndUser(id,user)
+        UserHasAddress userHasAddress = userHasAddressRepository.findByIdAndUserAndStatus(id,user,Status.ACTIVE)
                 .orElseThrow(()-> new BusinessException(ErrorCode.BAD_REQUEST,"Address not found or not yours"));
         userHasAddress.setStatus(Status.INACTIVE);
         userHasAddressRepository.save(userHasAddress);

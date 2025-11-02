@@ -1,6 +1,7 @@
 package backend_for_react.backend_for_react.service.impl;
 
 import backend_for_react.backend_for_react.common.enums.DeliveryStatus;
+import backend_for_react.backend_for_react.common.enums.ProductStatus;
 import backend_for_react.backend_for_react.common.enums.Status;
 import backend_for_react.backend_for_react.common.utils.CloudinaryHelper;
 import backend_for_react.backend_for_react.common.utils.SecurityUtils;
@@ -72,7 +73,7 @@ public class ReviewService {
     }
     private void updateProductAvgRating(Long productId) {
         Double avgRating = reviewRepository.findAverageRatingByProductId(productId);
-        Product product = productRepository.findById(productId)
+        Product product = productRepository.findByIdAndProductStatus(productId, ProductStatus.ACTIVE)
                 .orElseThrow(() -> new BusinessException(ErrorCode.BAD_REQUEST, MessageError.PRODUCT_NOT_FOUND));
         product.setAvgRating(avgRating != null ? avgRating : 0.0);
         productRepository.save(product);
@@ -80,7 +81,8 @@ public class ReviewService {
 
     @Transactional
     public void update(ReviewUpdateRequest req) {
-        Review review = reviewRepository.findById(req.getId()).orElseThrow(()->new EntityNotFoundException("Review not found"));
+        Review review = reviewRepository.findByIdAndStatus(req.getId(),Status.ACTIVE)
+                .orElseThrow(()->new BusinessException(ErrorCode.BAD_REQUEST,"Review not found"));
         review.setRating(req.getRating());
         review.setComment(req.getComment());
         updateProductAvgRating(review.getProduct().getId());
@@ -90,7 +92,8 @@ public class ReviewService {
     @Transactional
     public void deleteImage(List<Long> imageDelete) {
         for(Long id : imageDelete) {
-            ImageReview imageReview = imageReviewRepository.findById(id).orElseThrow(()->new EntityNotFoundException("ReviewImage not found"));
+            ImageReview imageReview = imageReviewRepository.findByIdAndStatus(id,Status.ACTIVE)
+                    .orElseThrow(()->new BusinessException(ErrorCode.BAD_REQUEST,"ReviewImage not found"));
             imageReview.setStatus(Status.INACTIVE);
             imageReviewRepository.save(imageReview);
         }
@@ -98,7 +101,8 @@ public class ReviewService {
 
     @Transactional
     public void addImage(List<String> imageAdd , Long reviewId) {
-        Review review = reviewRepository.findById(reviewId).orElseThrow(()->new EntityNotFoundException("Review not found"));
+        Review review = reviewRepository.findByIdAndStatus(reviewId,Status.ACTIVE)
+                .orElseThrow(()->new BusinessException(ErrorCode.BAD_REQUEST,"Review not found"));
         for(String url : imageAdd) {
            ImageReview imageReview = new ImageReview();
            imageReview.setUrlImage(url);
@@ -111,7 +115,8 @@ public class ReviewService {
 
     @Transactional(rollbackFor = Exception.class)
     public void delete(Long id) {
-        Review review = reviewRepository.findById(id).orElseThrow(()->new EntityNotFoundException("Review not found"));
+        Review review = reviewRepository.findByIdAndStatus(id,Status.ACTIVE)
+                .orElseThrow(()->new BusinessException(ErrorCode.BAD_REQUEST,"Review not found"));
         review.setStatus(Status.INACTIVE);
         updateProductAvgRating(review.getProduct().getId());
         reviewRepository.save(review);
@@ -119,7 +124,8 @@ public class ReviewService {
 
 
     public ReviewResponse getReviewById(Long reviewId) {
-        Review review = reviewRepository.findById(reviewId).orElseThrow(()->new EntityNotFoundException("Review not found"));
+        Review review = reviewRepository.findByIdAndStatus(reviewId,Status.ACTIVE)
+                .orElseThrow(()->new BusinessException(ErrorCode.BAD_REQUEST,"Review not found"));
         return getReviewResponse(review);
     }
 

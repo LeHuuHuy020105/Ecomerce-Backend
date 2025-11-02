@@ -7,10 +7,9 @@ import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-@Slf4j(topic = "COLOR-SERVICE")
+@Slf4j(topic = "ATTRIBUTE-VALUE-SERVICE")
 @RequiredArgsConstructor
 @Service
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
-public class ColorService {
-//    private
+public class AttributeValueService {
 }

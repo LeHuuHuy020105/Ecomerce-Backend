@@ -1,6 +1,7 @@
 package backend_for_react.backend_for_react.service;
 
 
+import backend_for_react.backend_for_react.common.enums.ProductStatus;
 import backend_for_react.backend_for_react.common.enums.Status;
 import backend_for_react.backend_for_react.controller.request.ImageProduct.ImageProductCreationRequest;
 import backend_for_react.backend_for_react.controller.request.ImageProduct.ImageProductDeleteRequest;
@@ -13,6 +14,7 @@ import backend_for_react.backend_for_react.repository.ImageProductRepository;
 import backend_for_react.backend_for_react.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,9 +29,10 @@ public class ImageProductService {
     private final ProductRepository productRepository;
 
     @Transactional(rollbackFor = Exception.class)
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('ADD_IMAGE_PRODUCT')")
     public void addImageProduct(ImageProductCreationRequest request) {
         log.info("addImageProduct");
-        Product product = productRepository.findById(request.getProductId()).orElseThrow(() -> new BusinessException(ErrorCode.NOT_EXISTED, MessageError.PRODUCT_NOT_FOUND));
+        Product product = productRepository.findByIdAndProductStatus(request.getProductId(), ProductStatus.ACTIVE).orElseThrow(() -> new BusinessException(ErrorCode.NOT_EXISTED, MessageError.PRODUCT_NOT_FOUND));
         List<ImageProduct> imageProducts = request.getUrlImages().stream()
                 .map(url -> {
                     ImageProduct imageProduct = new ImageProduct();
@@ -44,8 +47,11 @@ public class ImageProductService {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('DELETE_IMAGE_PRODUCT')")
     public void deleteImageProduct(ImageProductDeleteRequest request) {
         log.info("deleteImageProduct");
-        imageProductRepository.deleteAllByProductIdAndUrls(request.getProductId(), request.getUrlImages());
+        Product product = productRepository.findByIdAndProductStatus(request.getProductId(), ProductStatus.ACTIVE)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_EXISTED, MessageError.PRODUCT_NOT_FOUND));
+        imageProductRepository.deleteAllByProductIdAndUrls(product, request.getUrlImages());
     }
 }

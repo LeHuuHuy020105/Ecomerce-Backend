@@ -14,20 +14,27 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface VoucherRepository extends JpaRepository<Voucher, Long> {
-    @Query(value = "SELECT * FROM voucher v " +
-            "WHERE v.code LIKE %:keyword% " +
-            "OR v.type LIKE %:keyword% " +
-            "OR v.user_rank LIKE %:keyword%",
-            nativeQuery = true)
+    @Query("SELECT v FROM Voucher v WHERE " +
+            "LOWER(v.code) LIKE :keyword OR LOWER(v.discription) LIKE :keyword")
     Page<Voucher> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
+
+    Page<Voucher> findByUserRank_NameAndUserRankStatus(String name, Pageable pageable , Status status);
+
+    @Query("SELECT v FROM Voucher v WHERE " +
+            "(LOWER(v.code) LIKE :keyword OR LOWER(v.discription) LIKE :keyword) " +
+            "AND (v.userRank.name = :rank and v.userRank.status ='ACTIVE')")
+    Page<Voucher> searchByKeywordAndRank(@Param("keyword") String keyword,
+                                         @Param("rank") String rank,
+                                         Pageable pageable);
+
 
     @Query(value = "SELECT * FROM voucher v " +
             "WHERE v.code LIKE %:keyword% " +
             "OR v.type LIKE %:keyword% " +
-            "OR v.user_rank LIKE %:keyword%" +
             "OR v.status =: status",
             nativeQuery = true)
     Page<Voucher> searchByKeyword(@Param("keyword") String keyword, Pageable pageable , VoucherStatus status);
@@ -39,6 +46,7 @@ public interface VoucherRepository extends JpaRepository<Voucher, Long> {
         WHERE v.startDate <= :now 
             AND v.endDate >= :now
             AND v.totalQuantity >0 
+            AND v.userRank.status ='ACTIVE'
             AND v.userRank.level <= :levelRank
             AND v.userRank = null
 """)
@@ -49,5 +57,6 @@ public interface VoucherRepository extends JpaRepository<Voucher, Long> {
 
     Page<Voucher> findAllByStatus(VoucherStatus status, Pageable pageable);
 
+    Optional<Voucher> findByIdAndStatus(Long id, VoucherStatus status);
 
 }

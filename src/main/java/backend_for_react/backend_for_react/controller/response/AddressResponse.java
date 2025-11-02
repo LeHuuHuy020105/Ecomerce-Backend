@@ -30,5 +30,7 @@ public class AddressResponse {
 
     private AddressType addressType;
 
+    private boolean isDefaultAddress;
+
     private Status status;
 }

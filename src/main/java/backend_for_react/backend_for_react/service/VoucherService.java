@@ -1,5 +1,6 @@
 package backend_for_react.backend_for_react.service;
 
+import backend_for_react.backend_for_react.common.enums.Status;
 import backend_for_react.backend_for_react.common.enums.VoucherStatus;
 import backend_for_react.backend_for_react.common.enums.VoucherType;
 import backend_for_react.backend_for_react.common.utils.SecurityUtils;
@@ -46,40 +47,40 @@ public class VoucherService {
     UserRankRepository userRankRepository;
     SecurityUtils securityUtils;
 
-    public PageResponse<VoucherResponse> findAll(String keyword, String sort, int page, int size){
-        log.info("Find all vouchers ");
-
-        Sort order = Sort.by(Sort.Direction.ASC, "id");
-        if (sort != null && !sort.isEmpty()) {
-            Pattern pattern = Pattern.compile("(\\w+?)(:)(.*)"); //tencot:asc||desc
-            Matcher matcher = pattern.matcher(sort);
-            if (matcher.find()) {
-                String columnName = matcher.group(1);
-                if (matcher.group(3).equalsIgnoreCase("asc")) {
-                    order = Sort.by(Sort.Direction.ASC, columnName);
-                } else {
-                    order = Sort.by(Sort.Direction.DESC, columnName);
-                }
-            }
-        }
-        int pageNo = 0;
-        if (page > 0) {
-            pageNo = page - 1;
-        }
-        Pageable pageable = PageRequest.of(pageNo, size, order);
-        Page<Voucher> vouchers = null;
-        if (keyword == null || keyword.isEmpty()) {
-            vouchers = voucherRepository.findAllByStatus(VoucherStatus.ACTIVE,pageable);
-        } else {
-            keyword = "%" + keyword.toLowerCase() + "%";
-            vouchers = voucherRepository.searchByKeyword(keyword, pageable,VoucherStatus.ACTIVE);
-        }
-        PageResponse response = getVoucherPageResponse(pageNo, size, vouchers);
-        return response;
-    }
+//    public PageResponse<VoucherResponse> findAll(String keyword, String sort, int page, int size){
+//        log.info("Find all vouchers ");
+//
+//        Sort order = Sort.by(Sort.Direction.ASC, "id");
+//        if (sort != null && !sort.isEmpty()) {
+//            Pattern pattern = Pattern.compile("(\\w+?)(:)(.*)"); //tencot:asc||desc
+//            Matcher matcher = pattern.matcher(sort);
+//            if (matcher.find()) {
+//                String columnName = matcher.group(1);
+//                if (matcher.group(3).equalsIgnoreCase("asc")) {
+//                    order = Sort.by(Sort.Direction.ASC, columnName);
+//                } else {
+//                    order = Sort.by(Sort.Direction.DESC, columnName);
+//                }
+//            }
+//        }
+//        int pageNo = 0;
+//        if (page > 0) {
+//            pageNo = page - 1;
+//        }
+//        Pageable pageable = PageRequest.of(pageNo, size, order);
+//        Page<Voucher> vouchers = null;
+//        if (keyword == null || keyword.isEmpty()) {
+//            vouchers = voucherRepository.findAllByStatus(VoucherStatus.ACTIVE,pageable);
+//        } else {
+//            keyword = "%" + keyword.toLowerCase() + "%";
+//            vouchers = voucherRepository.searchByKeyword(keyword, pageable,VoucherStatus.ACTIVE);
+//        }
+//        PageResponse response = getVoucherPageResponse(pageNo, size, vouchers);
+//        return response;
+//    }
 
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('VIEW_ALL_VOUCHER')")
-    public PageResponse<VoucherResponse> findAllByAdmin(String keyword, String sort, int page, int size){
+    public PageResponse<VoucherResponse> findAllByAdmin(String keyword, String rank, String sort, int page, int size){
         log.info("Find all vouchers ");
 
         Sort order = Sort.by(Sort.Direction.ASC, "id");
@@ -101,11 +102,24 @@ public class VoucherService {
         }
         Pageable pageable = PageRequest.of(pageNo, size, order);
         Page<Voucher> vouchers = null;
-        if (keyword == null || keyword.isEmpty()) {
+
+        // Không có keyword & rank
+        if ((keyword == null || keyword.isEmpty()) && (rank == null || rank.isEmpty())) {
             vouchers = voucherRepository.findAll(pageable);
-        } else {
+        }
+        // Có rank nhưng không có keyword
+        else if (keyword == null || keyword.isEmpty()) {
+            vouchers = voucherRepository.findByUserRank_NameAndUserRankStatus(rank, pageable,Status.ACTIVE);
+        }
+        // Có keyword nhưng không có rank
+        else if (rank == null || rank.isEmpty()) {
             keyword = "%" + keyword.toLowerCase() + "%";
             vouchers = voucherRepository.searchByKeyword(keyword, pageable);
+        }
+        // Có cả keyword và rank
+        else {
+            keyword = "%" + keyword.toLowerCase() + "%";
+            vouchers = voucherRepository.searchByKeywordAndRank(keyword, rank, pageable);
         }
         PageResponse response = getVoucherPageResponse(pageNo, size, vouchers);
         return response;
@@ -133,7 +147,7 @@ public class VoucherService {
             voucher.setUsageLimitPerUser(request.getUsageLimitPerUser());
         }
         if(request.getUserRankId() != null){
-            UserRank userRank = userRankRepository.findById(request.getUserRankId())
+            UserRank userRank = userRankRepository.findByIdAndStatus(request.getUserRankId(), Status.ACTIVE)
                             .orElseThrow(()-> new BusinessException(ErrorCode.BAD_REQUEST,"User rank not found"));
             voucher.setUserRank(userRank);
         }
@@ -142,7 +156,7 @@ public class VoucherService {
 
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('UPDATE_VOUCHER')")
     public void update(VoucherUpdateRequest request){
-        Voucher voucher = voucherRepository.findById(request.getId())
+        Voucher voucher = voucherRepository.findByIdAndStatus(request.getId(),VoucherStatus.ACTIVE)
                 .orElseThrow(()-> new BusinessException(ErrorCode.BAD_REQUEST , MessageError.VOUCHER_NOT_FOUND));
         if(request.getCode() != null){
             voucher.setCode(request.getCode());
@@ -179,7 +193,7 @@ public class VoucherService {
             voucher.setUsageLimitPerUser(request.getUsageLimitPerUser());
         }
         if(request.getUserRankId() != null){
-            UserRank userRank = userRankRepository.findById(request.getUserRankId())
+            UserRank userRank = userRankRepository.findByIdAndStatus(request.getUserRankId(),Status.ACTIVE)
                     .orElseThrow(()-> new BusinessException(ErrorCode.BAD_REQUEST,"User rank not found"));
             voucher.setUserRank(userRank);
         }
@@ -188,13 +202,13 @@ public class VoucherService {
 
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('DELETE_VOUCHER')")
     public void delete(Long id){
-        Voucher voucher = voucherRepository.findById(id)
+        Voucher voucher = voucherRepository.findByIdAndStatus(id,VoucherStatus.ACTIVE)
                 .orElseThrow(()-> new BusinessException(ErrorCode.BAD_REQUEST, MessageError.VOUCHER_NOT_FOUND));
         voucher.setStatus(VoucherStatus.DISABLED);
     }
 
     public VoucherResponse getVoucherById(Long id){
-        Voucher voucher = voucherRepository.findById(id)
+        Voucher voucher = voucherRepository.findByIdAndStatus(id,VoucherStatus.ACTIVE)
                 .orElseThrow(()-> new BusinessException(ErrorCode.BAD_REQUEST, MessageError.VOUCHER_NOT_FOUND));
         return VoucherMapper.toVoucherResponse(voucher);
     }

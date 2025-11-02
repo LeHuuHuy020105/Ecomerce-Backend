@@ -78,7 +78,7 @@ public class CategoryServiceImpl implements CategoryService {
         for (CategoryCreationRequest req : requests){
             Category parent = null;
             if(req.getParentId() != null){
-                parent = categoryRepository.findById(req.getParentId())
+                parent = categoryRepository.findByIdAndStatus(req.getParentId(), Status.ACTIVE)
                         .orElseThrow(()-> new BusinessException(ErrorCode.NOT_EXISTED,MessageError.CATEGORY_NOT_FOUND));
             }
             saveChildrenCategory(parent,req);
@@ -101,13 +101,13 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void moveCategory(MoveCategoryRequest request){
-        Category currentCategory = categoryRepository.findById(request.getCategoryId())
+        Category currentCategory = categoryRepository.findByIdAndStatus(request.getCategoryId(),Status.ACTIVE)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_EXISTED,MessageError.CATEGORY_NOT_FOUND));
         if(request.getCategoryParentId() == null){
             currentCategory.setParent(null);
             categoryRepository.save(currentCategory);
         }else {
-            Category parentCategory = categoryRepository.findById(request.getCategoryParentId())
+            Category parentCategory = categoryRepository.findByIdAndStatus(request.getCategoryParentId(),Status.ACTIVE)
                     .orElseThrow(() -> new BusinessException(ErrorCode.NOT_EXISTED,MessageError.CATEGORY_NOT_FOUND));
             currentCategory.setParent(parentCategory);
             categoryRepository.save(currentCategory);
@@ -119,9 +119,10 @@ public class CategoryServiceImpl implements CategoryService {
     @Transactional(rollbackFor = Exception.class)
     @Override
     public void update(CategoryUpdateRequest req) {
-        Category category = categoryRepository.findById(req.getId()).orElseThrow(()-> new EntityNotFoundException("Category not found"));
+        Category category = categoryRepository.findByIdAndStatus(req.getId(),Status.ACTIVE)
+                .orElseThrow(()-> new BusinessException(ErrorCode.BAD_REQUEST,MessageError.CATEGORY_NOT_FOUND));
         if (req.getParentId() != null) {
-            Category parentCategory = categoryRepository.findById(req.getParentId())
+            Category parentCategory = categoryRepository.findByIdAndStatus(req.getParentId(),Status.ACTIVE)
                     .orElseThrow(() -> new EntityNotFoundException("Parent category not found with id: " + req.getParentId()));
             category.setParent(parentCategory);
         }
@@ -152,13 +153,14 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     public CategoryResponse getCategoryById(Long id) {
-        Category category = categoryRepository.findById(id).orElseThrow(()-> new EntityNotFoundException("Category not found"));
+        Category category = categoryRepository.findByIdAndStatus(id,Status.ACTIVE)
+                .orElseThrow(()-> new BusinessException(ErrorCode.BAD_REQUEST,MessageError.CATEGORY_NOT_FOUND));
         return getCategoryResponse(category);
     }
     @Override
     public List<Category> getAllParentCategories(Long categoryId) {
         List<Category> parentCategories = new ArrayList<>();
-        Category current = categoryRepository.findById(categoryId)
+        Category current = categoryRepository.findByIdAndStatus(categoryId,Status.ACTIVE)
                 .orElseThrow(() -> new EntityNotFoundException("Category not found"));
         parentCategories.add(0,current);
         while (current.getParent() != null) {

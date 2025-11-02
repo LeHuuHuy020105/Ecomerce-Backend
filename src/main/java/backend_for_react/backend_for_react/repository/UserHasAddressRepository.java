@@ -16,7 +16,7 @@ import java.util.Optional;
 
 @Repository
 public interface UserHasAddressRepository extends JpaRepository<UserHasAddress,Long> {
-    Optional<UserHasAddress> findByIdAndUser(Long userHassAddressId, User user);
+    Optional<UserHasAddress> findByIdAndUserAndStatus(Long userHassAddressId, User user , Status status);
 
     @Modifying
     @Query("UPDATE UserHasAddress u SET u.isDefault = false WHERE u.user.id = :userId")

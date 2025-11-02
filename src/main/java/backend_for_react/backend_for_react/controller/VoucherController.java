@@ -37,27 +37,28 @@ public class VoucherController {
         return new ResponseEntity<>(result, HttpStatus.OK);
     }
 
-    @GetMapping("/list")
-    public ResponseEntity<Object> findAll(@RequestParam(required = false) String keyword,
-                                          @RequestParam(required = false) String sort,
-                                          @RequestParam(defaultValue = "0") int page,
-                                          @RequestParam(defaultValue = "10") int size) {
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("status", HttpStatus.OK.value());
-        result.put("message", "voucher list");
-        result.put("data", voucherService.findAll(keyword, sort, page, size));
-        return new ResponseEntity<>(result, HttpStatus.OK);
-    }
+//    @GetMapping("/list")
+//    public ResponseEntity<Object> findAll(@RequestParam(required = false) String keyword,
+//                                          @RequestParam(required = false) String sort,
+//                                          @RequestParam(defaultValue = "0") int page,
+//                                          @RequestParam(defaultValue = "10") int size) {
+//        Map<String, Object> result = new LinkedHashMap<>();
+//        result.put("status", HttpStatus.OK.value());
+//        result.put("message", "voucher list");
+//        result.put("data", voucherService.findAll(keyword, sort, page, size));
+//        return new ResponseEntity<>(result, HttpStatus.OK);
+//    }
 
     @GetMapping("/admin/list")
     public ResponseEntity<Object> findAllByAdmin(@RequestParam(required = false) String keyword,
                                           @RequestParam(required = false) String sort,
                                           @RequestParam(defaultValue = "0") int page,
+                                          @RequestParam(required = false) String rank,
                                           @RequestParam(defaultValue = "10") int size) {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("status", HttpStatus.OK.value());
         result.put("message", "user list");
-        result.put("data", voucherService.findAllByAdmin(keyword, sort, page, size));
+        result.put("data", voucherService.findAllByAdmin(keyword, rank, sort, page, size));
         return new ResponseEntity<>(result, HttpStatus.OK);
     }
 

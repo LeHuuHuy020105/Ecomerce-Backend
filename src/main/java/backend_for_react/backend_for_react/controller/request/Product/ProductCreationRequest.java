@@ -8,10 +8,7 @@ import backend_for_react.backend_for_react.model.Attribute;
 import backend_for_react.backend_for_react.model.ImageProduct;
 import backend_for_react.backend_for_react.model.ImageProductDescription;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -57,4 +54,12 @@ public class ProductCreationRequest implements Serializable {
 
     @Valid
     private List<AttributeCreationRequest> attributes;
+
+    @AssertTrue(message = "List price must be greater than sale price")
+    public boolean isListPriceGreaterThanSalePrice() {
+        if (listPrice == null || salePrice == null) {
+            return true; // bỏ qua nếu không cập nhật giá
+        }
+        return listPrice.compareTo(salePrice) > 0;
+    }
 }

@@ -22,7 +22,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @Query("""
     SELECT o FROM Order o
     LEFT JOIN o.orderItems i
-    WHERE LOWER(i.nameProduct) LIKE :keyword
+    WHERE LOWER(i.nameProductSnapShot) LIKE :keyword
     """)
     Page<Order> searchByKeywordAndUser(@Param("keyword") String keyword, Pageable pageable, User user);
 

@@ -41,9 +41,10 @@ public class OrderItem extends BaseEntity {
     @Column(precision = 15, scale = 2, nullable = false)
     private BigDecimal finalPrice;
 
-    private BigDecimal listPrice;
-    private String nameProduct;
-    private String urlImage;
+    private BigDecimal listPriceSnapShot;
+    private String nameProductSnapShot;
+    private String urlImageSnapShot;
+    private String variantAttributesSnapshot;
 
 
     public String buildName() {

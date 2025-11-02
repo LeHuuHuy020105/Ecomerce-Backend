@@ -1,6 +1,7 @@
 package backend_for_react.backend_for_react.controller.request.ProductVariant;
 
 import backend_for_react.backend_for_react.controller.request.VariantAttribute.VariantAttributeRequest;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 
@@ -32,9 +33,7 @@ public class ProductVariantCreationRequest implements Serializable {
     @DecimalMin(value = "0.0", inclusive = false, message = "Price must be greater than 0")
     private BigDecimal price; // Giá
 
-    @NotNull(message = "Quantity must not be null")
-    @Min(value = 1, message = "Quantity must be at least 1")
-    private Integer quantity; // Số lượng
 
+    @Valid
     private List<VariantAttributeRequest> variantAttributes; // Các thuộc tính
 }

@@ -1,5 +1,6 @@
 package backend_for_react.backend_for_react.model;
 
+import backend_for_react.backend_for_react.common.enums.Status;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -23,4 +24,7 @@ public class Attribute {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id")
     private Product product;
+
+    @Enumerated(EnumType.STRING)
+    private Status status;
 }

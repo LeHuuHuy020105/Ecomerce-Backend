@@ -1,5 +1,6 @@
 package backend_for_react.backend_for_react.service;
 
+import backend_for_react.backend_for_react.common.enums.ProductStatus;
 import backend_for_react.backend_for_react.common.enums.Status;
 import backend_for_react.backend_for_react.controller.request.Category.CategoryCreationRequest;
 import backend_for_react.backend_for_react.controller.request.Category.CategoryUpdateRequest;
@@ -36,7 +37,7 @@ public class ProductVariantService {
     ProductRepository productRepository;
 
     public void add(ProductVariantCreationRequest request) {
-        Product product = productRepository.findById(request.getProductId())
+        Product product = productRepository.findByIdAndProductStatus(request.getProductId(), ProductStatus.ACTIVE)
                 .orElseThrow(()-> new BusinessException(ErrorCode.BAD_REQUEST, MessageError.PRODUCT_NOT_FOUND));
         ProductVariant productVariant = ProductVariant.builder()
                 .product(product)
@@ -45,7 +46,7 @@ public class ProductVariantService {
                 .length(request.getLength())
                 .weight(request.getWeight())
                 .price(request.getPrice())
-                .quantity(request.getQuantity())
+                .quantity(0)
                 .status(Status.ACTIVE)
                 .sku(generateSku(product, request))
                 .build();
@@ -57,7 +58,7 @@ public class ProductVariantService {
     }
 
     public void delete(Long productVariantId) {
-        ProductVariant productVariant = productVariantRepository.findById(productVariantId)
+        ProductVariant productVariant = productVariantRepository.findByIdAndStatus(productVariantId,Status.ACTIVE)
                 .orElseThrow(()-> new BusinessException(ErrorCode.BAD_REQUEST,MessageError.PRODUCT_VARIANT_NOT_FOUND));
         productVariant.setStatus(Status.INACTIVE);
         productVariantRepository.save(productVariant);

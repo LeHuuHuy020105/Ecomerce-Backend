@@ -21,7 +21,7 @@ public class ImageProductController {
     public void createImageProduct(@RequestBody ImageProductCreationRequest request) {
         imageProductService.addImageProduct(request);
     }
-    @PostMapping("/delete")
+    @DeleteMapping("/delete")
     public void deleteImageProduct(@RequestBody ImageProductDeleteRequest request) {
         imageProductService.deleteImageProduct(request);
     }

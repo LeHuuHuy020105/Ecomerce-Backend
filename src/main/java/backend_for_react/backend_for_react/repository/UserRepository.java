@@ -1,5 +1,6 @@
 package backend_for_react.backend_for_react.repository;
 
+import backend_for_react.backend_for_react.common.enums.UserStatus;
 import backend_for_react.backend_for_react.model.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -23,5 +24,7 @@ public interface UserRepository extends JpaRepository<User,Long> {
     Optional<User>findByProviderAndProviderId(String provider, String providerId);
 
     List<User> findAllByEmail(String email);
+
+    Optional<User>findByIdAndStatus(Long id , UserStatus status);
 
 }

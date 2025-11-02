@@ -54,7 +54,7 @@ public class ImportProductController {
     }
 
     @PostMapping("/add")
-    public ApiResponse<Object> createImportProduct(@RequestBody ImportProductCreationRequest req) {
+    public ApiResponse<Object> createImportProduct(@RequestBody @Valid ImportProductCreationRequest req) {
         ImportProductResponse result = importProductService.save(req);
         return new ApiResponse<Object>(HttpStatus.CREATED.value(),"Create import product successfull !",result);
     }
@@ -70,7 +70,7 @@ public class ImportProductController {
     }
 
     @PutMapping("/{importProductId}/details/update_quantity")
-    public void updateQuantityDetail(@PathVariable Long importProductId, @RequestBody List<UpdateImportDetailRequest> req) {
+    public void updateQuantityDetail(@PathVariable Long importProductId, @RequestBody List< @Valid UpdateImportDetailRequest> req) {
         importProductService.updateQuantityDetailFromPendingImport(req,importProductId);
     }
 

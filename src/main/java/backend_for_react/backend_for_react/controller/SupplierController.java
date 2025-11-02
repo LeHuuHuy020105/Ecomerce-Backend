@@ -44,17 +44,17 @@ public class SupplierController {
         return ApiResponse.<Void>builder().build();
     }
     @PutMapping("/update")
-    public ResponseEntity<String> updateProduct (@RequestBody SupplierUpdateRequest req){
+    public ResponseEntity<String> updateSupplier (@RequestBody SupplierUpdateRequest req){
         supplierService.update(req);
         return new ResponseEntity<>("",HttpStatus.OK);
     }
     @DeleteMapping("/{supplierId}/delete")
-    public ResponseEntity<String> deleteProduct (@PathVariable Long supplierId){
+    public ResponseEntity<String> deleteSupplier (@PathVariable Long supplierId){
         supplierService.delete(supplierId);
         return new ResponseEntity<>("",HttpStatus.OK);
     }
     @GetMapping("/{supplierId}")
-    public ResponseEntity<Object> getDetailProduct (@PathVariable Long supplierId){
+    public ResponseEntity<Object> getDetailSupplier (@PathVariable Long supplierId){
         Map<String,Object> result = new LinkedHashMap<>();
         result.put("status", HttpStatus.OK.value());
         result.put("message","product detail");
