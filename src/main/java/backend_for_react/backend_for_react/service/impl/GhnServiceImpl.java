@@ -3,6 +3,7 @@ package backend_for_react.backend_for_react.service.impl;
 
 import backend_for_react.backend_for_react.common.enums.DeliveryStatus;
 import backend_for_react.backend_for_react.common.enums.PaymentStatus;
+import backend_for_react.backend_for_react.common.enums.PaymentType;
 import backend_for_react.backend_for_react.common.enums.ReturnStatus;
 import backend_for_react.backend_for_react.config.Delivery.DeliveryConfig;
 import backend_for_react.backend_for_react.controller.FeeResponse;
@@ -99,11 +100,11 @@ public class GhnServiceImpl implements GhnService {
         if(!order.getOrderStatus().equals(DeliveryStatus.SHIPPED)){
             throw new BusinessException(ErrorCode.BAD_REQUEST,"Order status must be SHIPPED");
         }
-        if(order.getPaymentStatus().equals(PaymentStatus.PAID)){
-            throw new BusinessException(ErrorCode.BAD_REQUEST,"Payment status is PAIDED");
+        if(order.getPaymentType().equals(PaymentType.BANK_TRANSFER) && !order.getPaymentStatus().equals(PaymentStatus.PAID)){
+            throw new BusinessException(ErrorCode.BAD_REQUEST,"Payment status must be PAIDED");
         }
         ShippingOrderRequest req = toShippingOrderRequest(order);
-        String url = deliveryConfig.getBaseUrl() + "/v2/shipping-order/create";
+        String url = deliveryConfig.getBaseUrlProd() + "/v2/shipping-order/create";
 
         Map<String, Object> body = new HashMap<>();
         body.put("to_name", req.getDeliveryContactName());
@@ -125,11 +126,16 @@ public class GhnServiceImpl implements GhnService {
         body.put("required_note", requiredNote);
         body.put("payment_type_id",1);
         body.put("service_type_id",2);
+        if(order.getPaymentType().equals(PaymentType.CASH)){
+            BigDecimal totalAmount = order.getTotalAmount();
+            int codAmount = totalAmount.setScale(0, RoundingMode.CEILING).intValueExact();
+            body.put("cod_amount",codAmount);
+        }
         body.put("items", req.getItems());
 
         log.info("body: {}", body);
 
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, defaultHeadersDev());
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, defaultHeadersProd());
         ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
 
         log.info("GHN Create Order Response: {}", response.getBody());

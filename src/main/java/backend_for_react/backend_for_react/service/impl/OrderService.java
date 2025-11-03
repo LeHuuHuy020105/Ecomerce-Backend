@@ -201,6 +201,7 @@ public class OrderService {
         //Tinh phi ship
         FeeRequest feeRequest = ghnService.toFeeRequest(newOrder);
         BigDecimal feeShip = ghnService.calculateShippingFee(feeRequest).getTotal();
+        newOrder.setTotalFeeForShip(feeShip);
 
         // Áp dụng voucher nếu có
         BigDecimal discountValue = BigDecimal.ZERO;
@@ -260,10 +261,20 @@ public class OrderService {
     public void changeStatus(Long orderId, DeliveryStatus status) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_EXISTED, MessageError.ORDER_NOT_FOUND));
-        order.setOrderStatus(status);
+
+        if(order.getPaymentType().equals(PaymentType.BANK_TRANSFER) && order.getPaymentStatus().equals(PaymentStatus.UNPAID)){
+            throw new BusinessException(ErrorCode.BAD_REQUEST," You can't change status with order bank tranfer unpaid");
+        }
+        if(status.equals(DeliveryStatus.COMPLETED)){
+            if(order.getOrderTrackingCode() == null){
+                throw new BusinessException(ErrorCode.BAD_REQUEST,"The order has not been delivered to the shipping unit yet");
+            }
+            order.setPaymentStatus(PaymentStatus.PAID);
+        }
         if(status == DeliveryStatus.DELIVERED) {
             order.setDeliveredAt(LocalDateTime.now());
         }
+        order.setOrderStatus(status);
         orderRepository.save(order);
     }
 
@@ -272,7 +283,16 @@ public class OrderService {
         User currentUser = securityUtils.getCurrentUser();
         Order order = orderRepository.findOrderByIdAndUser(orderId,currentUser)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_EXISTED,"Order not found or not yours"));
-        order.setOrderStatus(DeliveryStatus.COMPLETED);
+       if(!order.getOrderStatus().equals(DeliveryStatus.COMPLETED)){
+           throw new BusinessException(ErrorCode.BAD_REQUEST,"Order is not completed");
+       }
+       if(order.getPaymentStatus().equals(PaymentStatus.UNPAID)){
+           throw new BusinessException(ErrorCode.BAD_REQUEST,"The order has not been paid yet");
+       }
+       if(order.isConfirmed()){
+           throw new BusinessException(ErrorCode.BAD_REQUEST,"Order is confirmed");
+       }
+       order.setConfirmed(true);
         // Nếu có user, cập nhật tổng chi tiêu và hạng
         User user = order.getUser();
         if (user != null) {
@@ -313,8 +333,11 @@ public class OrderService {
 
     public void completePayment(Long orderId) {
         Order order = orderRepository.findById(orderId).orElseThrow(() -> new BusinessException(ErrorCode.NOT_EXISTED, MessageError.ORDER_NOT_FOUND));
-        if(order.getPaymentType().equals(PaymentType.CASH) && !order.getOrderStatus().equals(DeliveryStatus.COMPLETED)){
-            throw new BusinessException(ErrorCode.BAD_REQUEST , "Order status is not COMPLETED.");
+        if(!order.getPaymentType().equals(PaymentType.BANK_TRANSFER)){
+            throw new BusinessException(ErrorCode.BAD_REQUEST , "Order type payment is not BANK.");
+        }
+        if(order.getPaymentStatus().equals(PaymentStatus.PAID)){
+            throw new BusinessException(ErrorCode.BAD_REQUEST , "This order is PAID.");
         }
         order.setPaymentStatus(PaymentStatus.PAID);
         orderRepository.save(order);
@@ -389,7 +412,8 @@ public class OrderService {
                 .toList();
         return OrderResponse.builder()
                 .id(order.getId())
-                .userResponse(UserMapper.getUserResponse(order.getUser()))
+                .orderTrackingCode(order.getOrderTrackingCode())
+                .userResponse(UserMapper.getPublicUserResponse(order.getUser()))
                 .customerName(order.getCustomerName())
                 .customerPhone(order.getCustomerPhone())
                 .deliveryWardName(order.getDeliveryWardName())
@@ -406,6 +430,7 @@ public class OrderService {
                 .originalOrderAmount(order.getOriginalOrderAmount())
                 .deliveryStatus(order.getOrderStatus())
                 .paymentStatus(order.getPaymentStatus())
+                .orderItemResponses(orderItemResponses)
                 .paymentType(order.getPaymentType())
                 .build();
     }

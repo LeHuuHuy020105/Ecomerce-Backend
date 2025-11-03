@@ -1,16 +1,20 @@
 package backend_for_react.backend_for_react.service;
 
+import backend_for_react.backend_for_react.common.enums.PaymentStatus;
 import backend_for_react.backend_for_react.common.enums.PaymentType;
+import backend_for_react.backend_for_react.common.utils.SecurityUtils;
 import backend_for_react.backend_for_react.config.vnpay.VnpayConfig;
 import backend_for_react.backend_for_react.exception.BusinessException;
 import backend_for_react.backend_for_react.exception.ErrorCode;
 import backend_for_react.backend_for_react.exception.MessageError;
 import backend_for_react.backend_for_react.model.Order;
+import backend_for_react.backend_for_react.model.User;
 import backend_for_react.backend_for_react.repository.OrderRepository;
 import backend_for_react.backend_for_react.service.impl.OrderService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springdoc.core.service.SecurityService;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -30,17 +34,28 @@ public class PaymentService {
     private final OrderService orderService;
     private final OrderRepository orderRepository;
     private final RedisTemplate redisTemplate;
+    private final SecurityUtils securityUtils;
 
     public String add(HttpServletRequest request , Long orderId) throws UnsupportedEncodingException {
         log.info("secretKey : {}", vnpayConfig.getSecretKey());
         log.info("vnp_TmnCode : {}" , vnpayConfig.getVnpTmnCode());
         log.info("vnp_Version: {}" , vnpayConfig.getVnpVersion());
 
+        User user = securityUtils.getCurrentUser();
+
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(()-> new BusinessException(ErrorCode.BAD_REQUEST, MessageError.ORDER_NOT_FOUND));
+
+        if(order.getUser() != user){
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Order is not yours");
+        }
         if(!order.getPaymentType().equals(PaymentType.BANK_TRANSFER)){
             throw new BusinessException(ErrorCode.BAD_REQUEST, "Payment type is not BANK_TRANSFER");
         }
+        if(order.getPaymentStatus().equals(PaymentStatus.PAID)){
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Order is PAID");
+        }
+
         // VNPay yêu cầu nhân 100
         long amount = order.getTotalAmount().longValue()*100;
         String vnp_TmnCode = vnpayConfig.getVnpTmnCode();
@@ -103,7 +118,7 @@ public class PaymentService {
         String paymentUrl = vnpayConfig.getVnpPayUrl() + "?" + queryUrl;
         log.info("✅ VNPay URL generated: {}", paymentUrl);
 
-        redisTemplate.opsForValue().set(vnp_TxnRef,orderId,6, TimeUnit.MINUTES);
+        redisTemplate.opsForValue().set(vnp_TxnRef,orderId,5, TimeUnit.MINUTES);
         return paymentUrl;
     }
 

@@ -101,6 +101,8 @@ public class Order extends BaseEntity{
     @Enumerated(EnumType.STRING)
     private OrderAfterSaleStatus afterSaleStatus;
 
+    private boolean isConfirmed = false;
+
     private LocalDateTime deliveredAt;
     private LocalDateTime completedAt;
 

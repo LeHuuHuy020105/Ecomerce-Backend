@@ -35,5 +35,6 @@ public class OrderResponse {
     DeliveryStatus deliveryStatus;
     PaymentStatus paymentStatus;
     PaymentType paymentType;
+    String orderTrackingCode;
     List<OrderItemResponse> orderItemResponses;
 }
