@@ -80,8 +80,8 @@ public class GhnServiceImpl implements GhnService {
     }
 
     private HttpHeaders defaultHeadersDev() {
-        log.info("token: {}" , deliveryConfig.getTokenDev());
-        log.info("shopId: {}" , deliveryConfig.getShopIdDev());
+        log.info("token-dev: {}" , deliveryConfig.getTokenDev());
+        log.info("shopId-dev: {}" , deliveryConfig.getShopIdDev());
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("Token", deliveryConfig.getTokenDev());
@@ -93,6 +93,7 @@ public class GhnServiceImpl implements GhnService {
     @Override
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('CREATE_ORDER_SHIP')")
     public ShippingOrderDetailResponse createShippingOrder(Long orderId ,String requiredNote) {
+        log.info("Create shipping order");
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(()-> new BusinessException(ErrorCode.BAD_REQUEST, MessageError.ORDER_NOT_FOUND));
         if(!order.getOrderStatus().equals(DeliveryStatus.SHIPPED)){

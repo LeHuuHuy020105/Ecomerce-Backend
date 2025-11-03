@@ -109,7 +109,25 @@ public class UserController {
         userService.setDefaultAddress(userHasAddressId);
         return ApiResponse.<Void>builder()
                 .status(HttpStatus.OK.value())
-                .message("Update default address succesfull")
+                .message("Updated default address succesfull")
+                .build();
+    }
+
+    @PutMapping("/address/update/{userHasAddressId}")
+    public ApiResponse<Void> updateAddress(@PathVariable Long userHasAddressId, @RequestBody UserCreationAddressRequest request) {
+        userService.updateAddress(userHasAddressId,request);
+        return ApiResponse.<Void>builder()
+                .status(HttpStatus.OK.value())
+                .message("Updated address succesfull")
+                .build();
+    }
+
+    @DeleteMapping("/address/delete/{userHasAddressId}")
+    public ApiResponse<Void> deleteAddress(@PathVariable Long userHasAddressId) {
+        userService.deleteAddress(userHasAddressId);
+        return ApiResponse.<Void>builder()
+                .status(HttpStatus.OK.value())
+                .message("Deleted address succesfull")
                 .build();
     }
 

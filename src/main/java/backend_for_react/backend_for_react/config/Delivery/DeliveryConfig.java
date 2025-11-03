@@ -21,7 +21,7 @@ public class DeliveryConfig {
     @Value("${spring.ghn.token-dev}")
     private String tokenDev;
 
-    @Value("${spring.ghn.shopId}")
+    @Value("${spring.ghn.shopId-dev}")
     private Long shopIdDev;
 
     @Value("${spring.ghn.baseUrlProd}")

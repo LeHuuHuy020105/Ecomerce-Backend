@@ -281,6 +281,29 @@ public class UserService {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    public void updateAddress(Long userHasAddressId, UserCreationAddressRequest req) {
+        User user = securityUtils.getCurrentUser();
+
+        UserHasAddress userHasAddress = userHasAddressRepository.findById(userHasAddressId)
+                .orElseThrow(()-> new BusinessException(ErrorCode.BAD_REQUEST,"User has address not found"));
+        if(userHasAddress.getUser() != user){
+            throw new BusinessException(ErrorCode.BAD_REQUEST,"Address not yours");
+        }
+        Address address = userHasAddress.getAddress();
+        if (req.getStreetAddress() != null) address.setAddress(req.getStreetAddress());
+        if(req.getWard() != null) address.setWard(req.getWard());
+        if(req.getDistrict() != null) address.setDistrict(req.getDistrict());
+        if(req.getProvince() != null) address.setProvince(req.getProvince());
+        if(req.getProvinceId() != null) address.setProvinceId(req.getProvinceId());
+        if(req.getDistrictId() != null) address.setDistrictId(req.getDistrictId());
+        if(req.getWardId() != null) address.setWardId(req.getWardId());
+        userHasAddress.setAddress(address);
+        if(req.getAddressType() != null) userHasAddress.setAddressType(req.getAddressType());
+
+        userHasAddressRepository.save(userHasAddress);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
     public void setDefaultAddress(Long id) {
         User user = securityUtils.getCurrentUser();
         UserHasAddress userHasAddress = userHasAddressRepository.findByIdAndUserAndStatus(id,user,Status.ACTIVE)
@@ -296,8 +319,7 @@ public class UserService {
         User user = securityUtils.getCurrentUser();
         UserHasAddress userHasAddress = userHasAddressRepository.findByIdAndUserAndStatus(id,user,Status.ACTIVE)
                 .orElseThrow(()-> new BusinessException(ErrorCode.BAD_REQUEST,"Address not found or not yours"));
-        userHasAddress.setStatus(Status.INACTIVE);
-        userHasAddressRepository.save(userHasAddress);
+        userHasAddressRepository.delete(userHasAddress);
     }
 
 

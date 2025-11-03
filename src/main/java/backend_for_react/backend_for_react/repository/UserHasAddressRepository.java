@@ -1,6 +1,7 @@
 package backend_for_react.backend_for_react.repository;
 
 import backend_for_react.backend_for_react.common.enums.Status;
+import backend_for_react.backend_for_react.model.Address;
 import backend_for_react.backend_for_react.model.User;
 import backend_for_react.backend_for_react.model.UserHasAddress;
 import org.springframework.data.domain.Page;
@@ -23,5 +24,7 @@ public interface UserHasAddressRepository extends JpaRepository<UserHasAddress,L
     void updateAllIsDefaultFalse(@Param("userId") Long userId);
 
     Page<UserHasAddress> findAllByUserAndStatus(User user, Pageable pageable , Status status);
+
+    Optional<UserHasAddress> findByAddress(Address address);
 
 }

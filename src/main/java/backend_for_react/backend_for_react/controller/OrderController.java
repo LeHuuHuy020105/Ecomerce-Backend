@@ -85,6 +85,12 @@ public class OrderController {
         return new ApiResponse<OrderResponse>(HttpStatus.OK.value(), "Get order detail" , orderResponse);
     }
 
+    @GetMapping("/admin/{orderId}")
+    public ApiResponse<OrderResponse> getOrderByIdForAdmin(@PathVariable Long orderId){
+        OrderResponse orderResponse = orderService.getOrderByIdForAdmin(orderId);
+        return new ApiResponse<OrderResponse>(HttpStatus.OK.value(), "Get order detail" , orderResponse);
+    }
+
     @DeleteMapping("/cancel")
     public ApiResponse<Void> cancelOrder(@RequestParam Long orderId){
         orderService.cancelOrder(orderId);

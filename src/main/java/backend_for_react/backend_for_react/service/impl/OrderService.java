@@ -155,7 +155,7 @@ public class OrderService {
             newOrder.setUser(currentUser);
         }
 
-        orderRepository.save(newOrder);
+
 
         // Tạo order item
         BigDecimal subTotal = BigDecimal.ZERO;
@@ -189,8 +189,8 @@ public class OrderService {
             orderItem.setFinalPrice(productVariant.getPrice());
 
             orderItems.add(orderItem);
-            orderItemRepository.save(orderItem);
         }
+        newOrder.setOrderItems(orderItems);
 
         // Cập nhật kích thước - trọng lượng
         newOrder.setHeight(calculateTotalHeight(orderItems));
@@ -240,7 +240,6 @@ public class OrderService {
                 BigDecimal finalUnitPrice = item.getFinalPrice().subtract(itemDiscount.divide(BigDecimal.valueOf(item.getQuantity()), 2, BigDecimal.ROUND_HALF_UP));
 
                 item.setFinalPrice(finalUnitPrice);
-                orderItemRepository.save(item);
             }
         }
 
@@ -321,6 +320,16 @@ public class OrderService {
         orderRepository.save(order);
     }
     public OrderResponse getOrderById(Long orderId) {
+        User user = securityUtils.getCurrentUser();
+        Order order = orderRepository.findById(orderId).orElseThrow(() -> new BusinessException(ErrorCode.NOT_EXISTED, MessageError.ORDER_NOT_FOUND));
+        if(order.getUser() != user){
+            throw new BusinessException(ErrorCode.BAD_REQUEST,"Order not yours");
+        }
+        return getOrderResponse(order);
+    }
+
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('VIEW_DETAIL_ORDER')")
+    public OrderResponse getOrderByIdForAdmin(Long orderId) {
         Order order = orderRepository.findById(orderId).orElseThrow(() -> new BusinessException(ErrorCode.NOT_EXISTED, MessageError.ORDER_NOT_FOUND));
         return getOrderResponse(order);
     }

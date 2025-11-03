@@ -38,7 +38,7 @@ public class Address extends BaseEntity{
     private Integer districtId;
 
     @Column
-    private Integer wardId;
+    private String wardId;
 
     @Column(name = "postal_code")
     private String postalCode;

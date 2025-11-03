@@ -19,12 +19,12 @@ public class OrderItem extends BaseEntity {
 
     // Đơn hàng chứa sản phẩm này
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "order_id", nullable = false)
+    @JoinColumn(name = "order_id")
     private Order order;
 
     // Phiên bản sản phẩm (màu, size, v.v.)
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_variant_id", nullable = false)
+    @JoinColumn(name = "product_variant_id")
     private ProductVariant productVariant;
 
     @OneToMany(mappedBy = "orderItem", cascade = CascadeType.ALL, fetch = FetchType.LAZY)

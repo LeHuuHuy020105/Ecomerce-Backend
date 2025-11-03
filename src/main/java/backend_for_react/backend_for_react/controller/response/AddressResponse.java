@@ -24,7 +24,7 @@ public class AddressResponse {
 
     private Integer districtId;
 
-    private Integer wardId;
+    private String wardId;
 
     private String streetAddress;
 

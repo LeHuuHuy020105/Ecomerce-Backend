@@ -89,7 +89,7 @@ public class Order extends BaseEntity{
     @Column
     private PaymentStatus paymentStatus;
 
-    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL,fetch = FetchType.LAZY)
     private List<OrderItem>orderItems;
 
     @ManyToOne

@@ -46,9 +46,9 @@ public class CartController {
     }
 
 
-    @PutMapping("/update")
-    public ApiResponse<Void> update(@RequestBody CartUpdateRequest request){
-        cartService.update(request);
+    @PutMapping("/{cartId}/update")
+    public ApiResponse<Void> update(@RequestBody CartUpdateRequest request , @PathVariable Long cartId){
+        cartService.update(cartId,request);
         return ApiResponse.<Void>builder()
                 .status(HttpStatus.OK.value())
                 .message("Update cart successfully")

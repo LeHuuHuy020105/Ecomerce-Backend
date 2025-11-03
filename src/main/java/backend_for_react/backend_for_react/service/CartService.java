@@ -67,7 +67,7 @@ public class CartService {
             pageNo = page - 1;
         }
         Pageable pageable = PageRequest.of(pageNo, size, order);
-        Page<Cart> carts = cartRepository.findAllByUser(user,pageable);
+        Page<Cart> carts = cartRepository.findAllByUserAndStatus(user,Status.ACTIVE,pageable);
         PageResponse response = getCartPageResponse(pageNo, size, carts);
         return response;
     }

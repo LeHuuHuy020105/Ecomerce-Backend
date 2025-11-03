@@ -16,11 +16,11 @@ public class UserHasAddress {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id ;
 
-    @ManyToOne(cascade = CascadeType.ALL)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
 
-    @ManyToOne(cascade = CascadeType.ALL)
+    @ManyToOne(fetch = FetchType.LAZY,cascade = CascadeType.ALL)
     @JoinColumn(name = "address_id")
     private Address address;
 

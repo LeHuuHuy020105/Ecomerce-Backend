@@ -9,16 +9,13 @@ import lombok.Data;
 @Data
 public class UserCreationAddressRequest {
 
-    @NotNull(message = "province must be not blank")
-    @Min(value = 1, message = "province invalid")
+    @NotBlank(message = "province must be not blank")
     private String province;
 
-    @NotNull(message = "district must be not blank")
-    @Min(value = 1, message = "district invalid")
+    @NotBlank(message = "district must be not blank")
     private String district;
 
-    @NotNull(message = "ward must be not blank")
-    @Min(value = 1, message = "ward invalid")
+    @NotBlank(message = "ward must be not blank")
     private String ward;
 
 
@@ -31,11 +28,10 @@ public class UserCreationAddressRequest {
     @Min(value = 1, message = "district invalid")
     private Integer districtId;
 
-    @NotNull(message = "ward id must be not blank")
-    @Min(value = 1, message = "ward invalid")
-    private Integer wardId;
+    @NotBlank(message = "ward id must be not blank")
+    private String wardId;
 
-    @NotNull(message = "address must be not blank")
+    @NotBlank(message = "address must be not blank")
     private String streetAddress;
 
     private AddressType addressType;
