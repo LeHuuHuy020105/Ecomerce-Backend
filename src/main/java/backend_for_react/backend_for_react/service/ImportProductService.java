@@ -199,15 +199,18 @@ public class ImportProductService {
         // TÌM VÀ KIỂM TRA TRẠNG THÁI
 
         ImportProduct importProduct = importProductRepository.findById(importId)
-                .orElseThrow(()-> new EntityNotFoundException("Import not found"));
+                .orElseThrow(()-> new BusinessException(ErrorCode.BAD_REQUEST,"Import not found"));
 
+        if(!importProduct.getStatus().equals(DeliveryStatus.PENDING)){
+            throw new BusinessException(ErrorCode.BAD_REQUEST,"Import product not in PENDING");}
         // DUYỆT QUA TỪNG CHI TIẾT VÀ CẬP NHẬT SỐ LƯỢNG TỒN KHO
-        for (ImportDetail detail : importProduct.getImportDetails()) {
-            ProductVariant productVariant = detail.getProductVariant();
-            int newQuantity = productVariant.getQuantity() + detail.getQuantity();
-            productVariant.setQuantity(newQuantity);
-            productVariantRepository.save(productVariant);
-        }
+        importProduct.getImportDetails().stream()
+                .filter(detail -> detail.getStatus() == Status.ACTIVE)
+                .forEach(detail -> {
+                    ProductVariant variant = detail.getProductVariant();
+                    variant.setQuantity(variant.getQuantity() + detail.getQuantity());
+                    productVariantRepository.save(variant);
+                });
         // CHUYỂN TRẠNG THÁI
         importProduct.setStatus(DeliveryStatus.COMPLETED);
         importProductRepository.save(importProduct);
@@ -268,7 +271,7 @@ public class ImportProductService {
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('UPDATE_QUANTITY_IMPORT_PRODUCT')")
     public void updateQuantityDetailFromPendingImport (List<UpdateImportDetailRequest> request , Long  importId) {
         ImportProduct importProduct = importProductRepository.findById(importId)
-                .orElseThrow(() -> new EntityNotFoundException("Import not found"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.BAD_REQUEST,"Import not found"));
         if(importProduct.getStatus() != DeliveryStatus.PENDING) {
             throw new BusinessException(ErrorCode.BAD_REQUEST, "Import not in PENDING");
         }

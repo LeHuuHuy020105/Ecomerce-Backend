@@ -85,6 +85,9 @@ public class CartService {
                newCart.setProductVariant(productVariant);
                newCart.setQuantity(request.getQuantity());
                newCart.setStatus(Status.ACTIVE);
+               newCart.setListPriceSnapShot(productVariant.getPrice());
+               newCart.setUrlImageSnapShot(productVariant.getProduct().getUrlCoverImage());
+               newCart.setNameProductSnapShot(ProductVariantMapper.buildVariantName(productVariant));
                cartRepository.save(newCart);
            }else {
                Cart oldCart = cart.get();
@@ -93,14 +96,15 @@ public class CartService {
            }
     }
 
-    public void update(CartUpdateRequest request){
+    public void update(Long cartId, CartUpdateRequest request){
         User user = securityUtils.getCurrentUser();
-        ProductVariant productVariant = productVariantRepository.findById(request.getProductVariantId())
-                .orElseThrow(()-> new BusinessException(ErrorCode.BAD_REQUEST, MessageError.PRODUCT_VARIANT_NOT_FOUND));
-        Cart cart = cartRepository.findByUserAndProductVariant(user, productVariant)
+        Cart cart = cartRepository.findByIdAndStatus(cartId,Status.ACTIVE)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_EXISTED, "Cart not found"));
+        if(cart.getUser() != user){
+            throw new BusinessException(ErrorCode.NOT_EXISTED, "Cart not part of yours");
+        }
         if(request.getQuantity() != null){
-            if(request.getQuantity() > productVariant.getQuantity()){
+            if(request.getQuantity() > cart.getProductVariant().getQuantity()){
                 throw new BusinessException(ErrorCode.BAD_REQUEST,"Quantity exceeds maximum quantity");
             }
             cart.setQuantity(request.getQuantity());
@@ -108,12 +112,13 @@ public class CartService {
         cartRepository.save(cart);
     }
 
-    public void delete(Long productVariantId){
+    public void delete(Long cartId){
         User user = securityUtils.getCurrentUser();
-        ProductVariant productVariant = productVariantRepository.findById(productVariantId)
-                .orElseThrow(()-> new BusinessException(ErrorCode.BAD_REQUEST, MessageError.PRODUCT_VARIANT_NOT_FOUND));
-        Cart cart = cartRepository.findByUserAndProductVariant(user, productVariant)
+        Cart cart = cartRepository.findByIdAndStatus(cartId,Status.ACTIVE)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_EXISTED, "Cart not found"));
+        if(cart.getUser() != user){
+            throw new BusinessException(ErrorCode.NOT_EXISTED, "Cart not part of yours");
+        }
         cart.setStatus(Status.INACTIVE);
         cartRepository.save(cart);
     }
@@ -124,6 +129,10 @@ public class CartService {
                 .productBaseResponse(ProductMapper.toBaseResponse(cart.getProductVariant().getProduct()))
                 .productVariantResponse(productVariantResponse)
                 .quantity(cart.getQuantity())
+                .urlImageSnapShot(cart.getUrlImageSnapShot())
+                .nameProductSnapShot(cart.getNameProductSnapShot())
+                .listPriceSnapShot(cart.getListPriceSnapShot())
+                .variantAttributesSnapshot(cart.getVariantAttributesSnapshot())
                 .build();
     }
     private PageResponse<CartResponse> getCartPageResponse(int page, int size, Page<Cart> carts) {

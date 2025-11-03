@@ -59,7 +59,7 @@ public class OrderService {
     GhnService ghnService;
     private final UserService userService;
 
-    public PageResponse<OrderResponse> findAllByUser(String keyword, String sort, int page, int size , DeliveryStatus orderStatus ) {
+    public PageResponse<OrderResponse> findAllByUser(String keyword, String sort, int page, int size , boolean isAll, DeliveryStatus orderStatus ) {
         log.info("KEYWORD : ", keyword);
         User user = securityUtils.getCurrentUser();
         Sort order = Sort.by(Sort.Direction.ASC, "id");
@@ -82,11 +82,13 @@ public class OrderService {
         Pageable pageable = PageRequest.of(pageNo, size, order);
         Page<Order> orders = null;
         if (keyword == null || keyword.isEmpty()) {
-            orders = orderRepository.findAllByUserAndOrderStatus(user,orderStatus,pageable);
+            if(isAll) orders = orderRepository.findAllByUser(user,pageable);
+            else orders = orderRepository.findAllByUserAndOrderStatus(user,orderStatus,pageable);
         } else {
             log.info("Keyword");
             keyword = "%" + keyword.toLowerCase() + "%";
-            orders = orderRepository.searchByKeywordAndUser(keyword,pageable,user);
+            if (isAll) orders = orderRepository.searchByKeywordAndUser(keyword,pageable,user);
+            else orders = orderRepository.searchByKeywordAndUser(keyword,pageable,user,orderStatus);
         }
         PageResponse response = getOrderPageResponse(pageNo, size, orders);
         return response;
@@ -94,6 +96,7 @@ public class OrderService {
 
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('VIEW_ALL_PRODUCT')")
     public PageResponse<OrderResponse> findAllByAdmin( String keyword,
+                                                       boolean isAll,
                                                        DeliveryStatus orderStatus,
                                                        String sort,
                                                        int page,
@@ -120,7 +123,9 @@ public class OrderService {
         }
         Pageable pageable = PageRequest.of(pageNo, size, order);
         String search = (keyword == null || keyword.isEmpty()) ? "" : keyword.trim().toLowerCase();
-        Page<Order> orders = orderRepository.searchByKeywordAndFilter(search, orderStatus, startDate, endDate, pageable);
+        Page<Order> orders = null;
+        if(isAll) orders = orderRepository.searchByKeywordAndFilter(search,startDate, endDate, pageable);
+        else orders = orderRepository.searchByKeywordAndFilter(search,orderStatus,startDate, endDate, pageable);
         return getOrderPageResponse(pageNo, size, orders);
     }
 

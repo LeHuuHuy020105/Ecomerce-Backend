@@ -7,6 +7,8 @@ import backend_for_react.backend_for_react.controller.response.PageResponse;
 import backend_for_react.backend_for_react.controller.response.RoleResponse;
 import backend_for_react.backend_for_react.controller.response.SupplierResponse;
 import backend_for_react.backend_for_react.controller.response.UserResponse;
+import backend_for_react.backend_for_react.exception.BusinessException;
+import backend_for_react.backend_for_react.exception.ErrorCode;
 import backend_for_react.backend_for_react.model.Supplier;
 import backend_for_react.backend_for_react.model.User;
 import backend_for_react.backend_for_react.repository.SupplierRepository;
@@ -37,7 +39,7 @@ public class SupplierService {
     SupplierRepository supplierRepository;
 
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('VIEW_ALL_SUPPLIER')")
-    public PageResponse<SupplierResponse> findAll(String keyword, String sort, int page, int size) {
+    public PageResponse<SupplierResponse> findAll(String keyword, String sort, Status status, int page, int size) {
         Sort order = Sort.by(Sort.Direction.ASC, "id");
         if (sort != null && !sort.isEmpty()) {
             Pattern pattern = Pattern.compile("(\\w+?)(:)(.*)"); //tencot:asc||desc
@@ -58,10 +60,18 @@ public class SupplierService {
         Pageable pageable = PageRequest.of(pageNo, size, order);
         Page<Supplier> suppliers = null;
         if (keyword == null || keyword.isEmpty()) {
-            suppliers = supplierRepository.findAll(pageable);
+            if(status != null){
+                suppliers = supplierRepository.findAllByStatus(status,pageable);
+            }else {
+                suppliers = supplierRepository.findAll(pageable);
+            }
+
         } else {
             keyword = "%" + keyword.toLowerCase() + "%";
-            suppliers = supplierRepository.searchByKeyword(keyword,pageable);
+            if(status != null){ suppliers = supplierRepository.searchByKeyword(keyword,status,pageable);}
+            else{
+                suppliers = supplierRepository.searchByKeyword(keyword,pageable);
+            }
         }
         PageResponse response = getUserPageResponse(pageNo, size, suppliers);
         return response;
@@ -80,9 +90,23 @@ public class SupplierService {
     }
 
     @Transactional
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('ADD_SUPPLIER')")
+    public void restoreSupplier(Long id){
+        Supplier supplier = supplierRepository.findById(id)
+                .orElseThrow(()-> new BusinessException(ErrorCode.BAD_REQUEST,"Supplier not found"));
+        if(supplier.getStatus().equals(Status.ACTIVE)){
+            throw new BusinessException(ErrorCode.BAD_REQUEST,"Supplier is already active");
+        }
+        supplier.setStatus(Status.ACTIVE);
+        supplierRepository.save(supplier);
+    }
+
+
+    @Transactional
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('UPDATE_SUPPLIER')")
     public void update (SupplierUpdateRequest request){
-        Supplier supplier = supplierRepository.findByIdAndStatus(request.getId(),Status.ACTIVE).orElseThrow(()-> new EntityNotFoundException("Supplier not found"));
+        Supplier supplier = supplierRepository.findByIdAndStatus(request.getId(),Status.ACTIVE)
+                .orElseThrow(()-> new BusinessException(ErrorCode.BAD_REQUEST,"Supplier not found"));
         if(request.getName() != null){
             supplier.setName(request.getName());
         }

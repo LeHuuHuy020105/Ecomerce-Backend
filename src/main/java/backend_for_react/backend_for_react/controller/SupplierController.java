@@ -1,5 +1,6 @@
 package backend_for_react.backend_for_react.controller;
 
+import backend_for_react.backend_for_react.common.enums.Status;
 import backend_for_react.backend_for_react.controller.request.Product.ProductCreationRequest;
 import backend_for_react.backend_for_react.controller.request.Product.ProductUpdateRequest;
 import backend_for_react.backend_for_react.controller.request.Supplier.SupplierCreationRequest;
@@ -29,15 +30,23 @@ public class SupplierController {
     @GetMapping("/list")
     public ResponseEntity<Object> findAll(@RequestParam(required = false) String keyword,
                                           @RequestParam(required = false) String sort,
+                                          @RequestParam(required = false) Status status,
                                           @RequestParam(defaultValue = "0") int page,
                                           @RequestParam(defaultValue = "10") int size){
         Map<String,Object> result = new LinkedHashMap<>();
         result.put("status", HttpStatus.OK.value());
         result.put("message","supplier list");
-        result.put("data",supplierService.findAll(keyword,sort,page,size));
+        result.put("data",supplierService.findAll(keyword,sort,status,page,size));
         return new ResponseEntity<>(result,HttpStatus.OK);
     }
-
+    @PostMapping("/{supplierId}/restore")
+    public ApiResponse<Void> restore(@PathVariable Long supplierId){
+        supplierService.restoreSupplier(supplierId);
+        return ApiResponse.<Void>builder()
+                .status(HttpStatus.OK.value())
+                .message("Supplier restored")
+                .build();
+    }
     @PostMapping("/add")
     public ApiResponse<Void> createProduct(@RequestBody @Valid SupplierCreationRequest req) throws IOException {
         supplierService.save(req);

@@ -1,5 +1,6 @@
 package backend_for_react.backend_for_react.controller;
 
+import backend_for_react.backend_for_react.common.enums.ProductStatus;
 import backend_for_react.backend_for_react.controller.request.Attribute.AttributeCreationRequest;
 import backend_for_react.backend_for_react.controller.request.AttributeValue.AttributeValueCreationRequest;
 import backend_for_react.backend_for_react.controller.request.Product.ProductCreationRequest;
@@ -58,27 +59,34 @@ public class ProductController {
     @GetMapping("/admin/list")
     public ResponseEntity<Object> findAllByAdmin(@RequestParam(required = false) String keyword,
                                           @RequestParam(required = false) String sort,
+                                          @RequestParam(required = false) ProductStatus status,
                                           @RequestParam(defaultValue = "0") int page,
                                           @RequestParam(defaultValue = "10") int size){
         Map<String,Object> result = new LinkedHashMap<>();
         result.put("status", HttpStatus.OK.value());
         result.put("message","product list");
-        result.put("data",productService.findAllByAdmin(keyword,sort,page,size));
+        result.put("data",productService.findAllByAdmin(keyword,sort,status,page,size));
         return new ResponseEntity<>(result,HttpStatus.OK);
     }
 
-
+    @PostMapping("/{productId}/restore")
+    public ApiResponse<Void> restore(@PathVariable Long productId){
+        productService.restoreProduct(productId);
+        return ApiResponse.<Void>builder()
+                .status(HttpStatus.OK.value())
+                .message("Product restored")
+                .build();
+    }
 
     @PostMapping("/add")
     public ApiResponse<Void> createProduct(@RequestBody @Valid ProductCreationRequest req) throws IOException {
         productService.save(req);
-        return ApiResponse.<Void>builder().build();
+        return ApiResponse.<Void>builder()
+                .status(HttpStatus.CREATED.value())
+                .message("Product created")
+                .build();
     }
-    @PutMapping("/{productId}/update/quantity")
-    public ResponseEntity<String>updateProductQuantity(@RequestBody List<VariantQuantityUpdateRequest> req , @PathVariable Long productId) {
-        productService.updateVariantQuantity(req,productId);
-        return new ResponseEntity<>("",HttpStatus.OK);
-    }
+    
     @PutMapping("/update")
     public ResponseEntity<String> updateProduct (@RequestBody @Valid ProductUpdateRequest req){
         productService.update(req);
@@ -108,14 +116,13 @@ public class ProductController {
         return new ResponseEntity<>(result,HttpStatus.OK);
     }
 
-    @PutMapping("/{productId}/attributes/{attributeId}/update")
-    public ApiResponse<Void> updateAttribute(@PathVariable Long productId ,
-                                             @PathVariable Long attributeId ,
-                                             @RequestBody AttributeCreationRequest request){
-        productService.updateAttribute(productId,attributeId,request);
+    @PostMapping("/{productId}/variants/add")
+    public ApiResponse<Void> addVariant(@PathVariable Long productId ,
+                                           @RequestBody @Valid ProductVariantCreationRequest request){
+        productService.addVariant(productId,request);
         return ApiResponse.<Void>builder()
-                .status(HttpStatus.OK.value())
-                .message("attribute updated")
+                .status(HttpStatus.CREATED.value())
+                .message("variant added")
                 .build();
     }
 
@@ -127,37 +134,6 @@ public class ProductController {
         return ApiResponse.<Void>builder()
                 .status(HttpStatus.OK.value())
                 .message("variant updated")
-                .build();
-    }
-
-    @PutMapping("/{productId}/attributeValue/{attributeValueId}/update")
-    public ApiResponse<Void> updateAttributeValue(@PathVariable Long productId ,
-                                             @PathVariable Long attributeValueId ,
-                                             @RequestBody AttributeValueCreationRequest request){
-        productService.updateAttributeValue(productId,attributeValueId,request);
-        return ApiResponse.<Void>builder()
-                .status(HttpStatus.OK.value())
-                .message("attribute value updated")
-                .build();
-    }
-
-    @DeleteMapping("/{productId}/attributes/{attributeId}/delete")
-    public ApiResponse<Void> deleteAttribute(@PathVariable Long productId ,
-                                             @PathVariable Long attributeId){
-        productService.deleteAttribute(productId,attributeId);
-        return ApiResponse.<Void>builder()
-                .status(HttpStatus.OK.value())
-                .message("attribute deleted")
-                .build();
-    }
-
-    @DeleteMapping("/{productId}/attributeValues/{attributeValueId}/delete")
-    public ApiResponse<Void> deleteAttributeValue(@PathVariable Long productId ,
-                                             @PathVariable Long attributeValueId){
-        productService.deleteAttributeValue(productId,attributeValueId);
-        return ApiResponse.<Void>builder()
-                .status(HttpStatus.OK.value())
-                .message("attribute value deleted")
                 .build();
     }
 

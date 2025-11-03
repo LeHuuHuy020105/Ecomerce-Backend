@@ -14,7 +14,9 @@ import java.util.Optional;
 public interface AttributeRepository extends JpaRepository<Attribute,Long> {
     List<Attribute> findAllByProduct(Product product);
 
-    Attribute findByName(String name);
+    Optional<Attribute> findByNameAndStatus(String name, Status status);
+
+    Optional<Attribute> findByNameAndStatusAndProduct(String name, Status status, Product product);
 
     Optional<Attribute>findByIdAndStatus(Long id, Status status);
 }

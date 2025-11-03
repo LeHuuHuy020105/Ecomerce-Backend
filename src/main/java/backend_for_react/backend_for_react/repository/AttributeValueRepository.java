@@ -14,4 +14,7 @@ public interface AttributeValueRepository extends JpaRepository<AttributeValue,L
     List<AttributeValue> findAllByAttribute(Attribute attribute);
 
     Optional<AttributeValue>findByIdAndStatus(Long id, Status status);
+
+    Optional<AttributeValue>findByAttributeAndValueAndStatus(Attribute attribute, String value, Status status);
+
 }

@@ -21,7 +21,7 @@ public interface SupplierRepository extends JpaRepository<Supplier,Long> {
             "u.phone like:keyword or u.address like:keyword) ")
     Page<Supplier> searchByKeyword(String keyword,Pageable pageable);
 
-    Page<Supplier> findAllByStatus(Status status , Pageable pageable);
-
     Optional<Supplier>findByIdAndStatus(Long id, Status status);
+
+    Page<Supplier>findAllByStatus(Status status, Pageable pageable);
 }

@@ -74,7 +74,7 @@ public class ImportProductController {
         importProductService.updateQuantityDetailFromPendingImport(req,importProductId);
     }
 
-    @DeleteMapping("{importProductId}/details/{detailId}")
+    @DeleteMapping("/{importProductId}/details/delete/{detailId}")
     public void removeDetail(@PathVariable Long importProductId, @PathVariable Long detailId) {
         importProductService.removeDetailFromPendingImport(importProductId,detailId);
     }

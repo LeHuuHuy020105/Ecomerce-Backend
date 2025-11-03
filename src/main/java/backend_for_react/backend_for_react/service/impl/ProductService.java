@@ -86,7 +86,7 @@ public class ProductService {
     }
 
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('VIEW_ALL_PRODUCT')")
-    public PageResponse<ProductBaseResponse> findAllByAdmin(String keyword, String sort, int page, int size) {
+    public PageResponse<ProductBaseResponse> findAllByAdmin(String keyword, String sort, ProductStatus productStatus, int page, int size) {
         log.info("KEYWORD : ", keyword);
         Sort order = Sort.by(Sort.Direction.ASC, "id");
         if (sort != null && !sort.isEmpty()) {
@@ -108,11 +108,19 @@ public class ProductService {
         Pageable pageable = PageRequest.of(pageNo, size, order);
         Page<Product> products = null;
         if (keyword == null || keyword.isEmpty()) {
-            products = productRepository.findAll(pageable);
+            if(productStatus != null){
+                products = productRepository.findAllByProductStatus(productStatus,pageable);
+            }else {
+                products = productRepository.findAll(pageable);
+            }
+
         } else {
             log.info("Keyword");
             keyword = "%" + keyword.toLowerCase() + "%";
-            products = productRepository.searchByKeyword(keyword,pageable);
+            if(productStatus != null){products = productRepository.searchByKeyword(keyword,productStatus,pageable);}
+            else {
+                products =productRepository.searchByKeyword(keyword,pageable);
+            }
         }
         PageResponse response = getProductPageResponse(pageNo, size, products);
         return response;
@@ -220,9 +228,22 @@ public class ProductService {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('RESTORE_PRODUCT')")
+    public void restoreProduct(Long productId){
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.BAD_REQUEST,MessageError.PRODUCT_NOT_FOUND));
+        if(!product.getProductStatus().equals(ProductStatus.INACTIVE)){
+            throw new BusinessException(ErrorCode.BAD_REQUEST,"Product is active");
+        }
+        product.setProductStatus(ProductStatus.ACTIVE);
+        productRepository.save(product);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('DELETE_PRODUCT')")
     public void delete(Long id) {
-        Product product = productRepository.findByIdAndProductStatus(id,ProductStatus.ACTIVE).orElseThrow(() -> new EntityNotFoundException("Product not found"));
+        Product product = productRepository.findByIdAndProductStatus(id,ProductStatus.ACTIVE)
+                .orElseThrow(() -> new BusinessException(ErrorCode.BAD_REQUEST,MessageError.PRODUCT_NOT_FOUND));
         product.setProductStatus(ProductStatus.INACTIVE);
         productRepository.save(product);
     }
@@ -310,20 +331,24 @@ public class ProductService {
     /**
      * Tạo các biến thể sản phẩm từ các tổ hợp thuộc tính
      */
+    private ProductVariant makeBaseProductVariant(ProductVariantCreationRequest variantRequest , Product product) {
+        ProductVariant productVariant = ProductVariant.builder()
+                .product(product)
+                .height(variantRequest.getHeight())
+                .width(variantRequest.getWidth())
+                .length(variantRequest.getLength())
+                .weight(variantRequest.getWeight())
+                .price(variantRequest.getPrice())
+                .quantity(0)
+                .status(Status.ACTIVE)
+                .sku(generateSku(product, variantRequest))
+                .build();
+        return productVariant;
+    }
     private List<ProductVariant> processVariants(Product product, List<Attribute> attributes, List<ProductVariantCreationRequest> req) {
         log.info("ProductVariantCreationRequest: ", req);
         return req.stream().map(variantRequest -> {
-            ProductVariant productVariant = ProductVariant.builder()
-                    .product(product)
-                    .height(variantRequest.getHeight())
-                    .width(variantRequest.getWidth())
-                    .length(variantRequest.getLength())
-                    .weight(variantRequest.getWeight())
-                    .price(variantRequest.getPrice())
-                    .quantity(0)
-                    .status(Status.ACTIVE)
-                    .sku(generateSku(product, variantRequest))
-                    .build();
+            ProductVariant productVariant = makeBaseProductVariant(variantRequest, product);
             productVariantRepository.save(productVariant);
             variantRequest.getVariantAttributes().forEach(combo -> {
                 AttributeValue attributeValue = findAttributeValue(attributes, combo).orElseThrow(() -> new BusinessException(
@@ -392,69 +417,28 @@ public class ProductService {
         return productCode + "-" + variantCode + "-" + RandomStringUtils.randomNumeric(4);
     }
 
-    /**
-     * Update quantity
-     */
-    @Transactional
-    public void updateVariantQuantity(List<VariantQuantityUpdateRequest> req, Long productId) {
-        for (VariantQuantityUpdateRequest updateRequest : req) {
-            // 1. Tìm product
-            Product product = productRepository.findByIdAndProductStatus(productId,ProductStatus.ACTIVE)
-                    .orElseThrow(() -> new EntityNotFoundException("Product not found"));
-
-            // 2. Tìm tất cả biến thể của product
-            List<ProductVariant> variants = productVariantRepository.findAllByProduct(product);
-
-            // 3. Tìm biến thể khớp với thuộc tính đầu vào
-            ProductVariant targetVariant = variants.stream()
-                    .filter(variant -> matchesAttributes(variant, updateRequest.getVariantAttributes()))
-                    .findFirst()
-                    .orElseThrow(() -> new BusinessException(ErrorCode.NOT_EXISTED, "Variant not found"));
-
-            // 4. Cập nhật số lượng
-            targetVariant.setQuantity(targetVariant.getQuantity() + updateRequest.getQuantityChange());
-            productVariantRepository.save(targetVariant);
-        }
-    }
-
-    // Helper: Kiểm tra biến thể có khớp với thuộc tính không
-    private boolean matchesAttributes(ProductVariant variant, List<VariantAttributeRequest> attributes) {
-        List<VariantAttributeValue> variantAttributes = variantAttributeValueRepository.findAllByProductVariant(variant);
-
-        return attributes.stream().allMatch(inputAttr ->
-                variantAttributes.stream().anyMatch(variantAttr ->
-                        variantAttr.getAttributeValue().getAttribute().getName().equals(inputAttr.getAttribute()) &&
-                                variantAttr.getAttributeValue().getValue().equals(inputAttr.getValue())
-                )
-        );
-    }
-
 
     @Transactional
-    @PreAuthorize("hasRole('ADMIN') or hasAuthority('UPDATE_PRODUCT_ATTRIBUTE')")
-    public void updateAttribute(Long productId, Long attributeId, AttributeCreationRequest req) {
-        Attribute attribute = attributeRepository.findByIdAndStatus(attributeId,Status.ACTIVE)
-                .orElseThrow(() -> new EntityNotFoundException("Attribute not found"));
-        if (!attribute.getProduct().getId().equals(productId))
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "Attribute not part of product");
-
-        attribute.setName(req.getName());
-        attributeRepository.save(attribute);
-    }
-
-    @Transactional
-    @PreAuthorize("hasRole('ADMIN') or hasAuthority('DELETE_PRODUCT_ATTRIBUTE')")
-    public void deleteAttribute(Long productId, Long attributeId) {
-        Attribute attribute = attributeRepository.findByIdAndStatus(attributeId,Status.ACTIVE)
-                .orElseThrow(() -> new EntityNotFoundException("Attribute not found"));
-        if (!attribute.getProduct().getId().equals(productId))
-            throw new BusinessException(ErrorCode.UNAUTHORIZED, "Attribute not part of product");
-
-        attribute.setStatus(Status.INACTIVE);
-        // Cập nhật các value bên trong
-        List<AttributeValue> values = attributeValueRepository.findAllByAttribute(attribute);
-        values.forEach(v -> v.setStatus(Status.INACTIVE));
-        attributeRepository.save(attribute);
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('ADD_PRODUCT_VARIANT')")
+    public void addVariant(Long productId, ProductVariantCreationRequest req) {
+        Product product = productRepository.findByIdAndProductStatus(productId,ProductStatus.ACTIVE)
+                .orElseThrow(()-> new BusinessException(ErrorCode.BAD_REQUEST,MessageError.PRODUCT_NOT_FOUND));
+        ProductVariant productVariant = makeBaseProductVariant(req, product);
+        List<VariantAttributeValue> variantAttributeValues = req.getVariantAttributes().stream()
+                .map(variantAttributeRequest -> {
+                    Attribute attribute = attributeRepository.findByNameAndStatusAndProduct(variantAttributeRequest.getAttribute(),Status.ACTIVE,product)
+                            .orElseThrow(()-> new BusinessException(ErrorCode.BAD_REQUEST, "Attribute not found"));
+                    AttributeValue attributeValue = attributeValueRepository.findByAttributeAndValueAndStatus(attribute,variantAttributeRequest.getValue(),Status.ACTIVE)
+                            .orElseThrow(()-> new BusinessException(ErrorCode.BAD_REQUEST, "Attribute value not found"));
+                    VariantAttributeValue variantAttributeValue = new VariantAttributeValue();
+                    variantAttributeValue.setAttributeValue(attributeValue);
+                    variantAttributeValue.setStatus(Status.ACTIVE);
+                    variantAttributeValue.setProductVariant(productVariant);
+                    return variantAttributeValue;
+                })
+                .toList();
+        productVariant.setAttributeValues(variantAttributeValues);
+        productVariantRepository.save(productVariant);
     }
 
     @Transactional
@@ -474,37 +458,12 @@ public class ProductService {
     }
 
     @Transactional
-    @PreAuthorize("hasRole('ADMIN') or hasAuthority('UPDATE_PRODUCT_VARIANT')")
-    public void updateAttributeValue(Long productId, Long attributeValueId, AttributeValueCreationRequest req) {
-        AttributeValue attributeValue = attributeValueRepository.findByIdAndStatus(attributeValueId,Status.ACTIVE)
-                .orElseThrow(() -> new BusinessException(ErrorCode.BAD_REQUEST, "Attribute value not found"));
-        if (!attributeValue.getAttribute().getProduct().getId().equals(productId))
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "Variant not part of product");
-
-        if(req.getValue() != null) attributeValue.setValue(req.getValue());
-        if(req.getImage() != null) attributeValue.setUrlImage(req.getImage());
-        attributeValueRepository.save(attributeValue);
-    }
-
-    @Transactional
-    @PreAuthorize("hasRole('ADMIN') or hasAuthority('DELETE_PRODUCT_VARIANT')")
-    public void deleteAttributeValue(Long productId, Long attributeValueId) {
-        AttributeValue attributeValue = attributeValueRepository.findByIdAndStatus(attributeValueId,Status.ACTIVE)
-                .orElseThrow(() -> new BusinessException(ErrorCode.BAD_REQUEST, "Attribute value not found"));
-        if (!attributeValue.getAttribute().getProduct().getId().equals(productId))
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "Variant không thuộc sản phẩm");
-
-        attributeValue.setStatus(Status.INACTIVE);
-        attributeValueRepository.save(attributeValue);
-    }
-
-    @Transactional
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('DELETE_PRODUCT_VARIANT')")
     public void deleteVariant(Long productId, Long variantId) {
         ProductVariant variant = productVariantRepository.findByIdAndStatus(variantId,Status.ACTIVE)
                 .orElseThrow(() -> new EntityNotFoundException("Variant not found"));
         if (!variant.getProduct().getId().equals(productId))
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "Variant không thuộc sản phẩm");
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Variant not part of product");
 
         variant.setStatus(Status.INACTIVE);
         productVariantRepository.save(variant);
@@ -559,7 +518,8 @@ public class ProductService {
 
 
     private List<AttributeResponse> getAttributeResponse(Product product) {
-        List<AttributeResponse> attributeResponses = attributeRepository.findAllByProduct(product).stream().map(
+        List<AttributeResponse> attributeResponses = attributeRepository.findAllByProduct(product).stream()
+                .filter(attribute -> attribute.getStatus()==Status.ACTIVE).map(
                 attribute -> AttributeResponse.builder()
                         .id(attribute.getId())
                         .name(attribute.getName())

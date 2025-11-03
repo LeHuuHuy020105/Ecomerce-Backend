@@ -30,8 +30,10 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 public class CategoryServiceImpl implements CategoryService {
     private final CategoryRepository categoryRepository;
+
     @Override
-    public PageResponse<CategoryResponse> findAll(String keyword, String sort, int page, int size) {
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('VIEW_ALL_CATEGORIES')")
+    public PageResponse<CategoryResponse> findAll(String keyword, String sort, Status status, int page, int size) {
         Sort order = Sort.by(Sort.Direction.ASC,"id");
         if(sort !=null && !sort.isEmpty()){
             Pattern pattern = Pattern.compile("(\\w+?)(:)(.*)");
@@ -52,10 +54,12 @@ public class CategoryServiceImpl implements CategoryService {
         Pageable pageable = PageRequest.of(pageNo,size,order);
         Page<Category> categories = null;
         if(keyword == null || keyword.isEmpty()){
-            categories = categoryRepository.findAll(pageable);
+            if(status != null) categories = categoryRepository.findAllByStatus(status,pageable);
+            else categories = categoryRepository.findAll(pageable);
         }else {
             keyword = "%"+keyword.toLowerCase()+"%";
-            categories = categoryRepository.searchByKeyword(keyword,pageable);
+            if(status != null) categories = categoryRepository.searchByKeyword(keyword,status,pageable);
+            else categories = categoryRepository.searchByKeyword(keyword,pageable);
         }
         PageResponse response = getCategoryPageResponse(pageNo,size,categories);
         return response;
@@ -70,6 +74,25 @@ public class CategoryServiceImpl implements CategoryService {
         return categoryList;
     }
 
+    @Transactional(rollbackFor = Exception.class)
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('CREATE_CATEGORIES')")
+    @Override
+    public void restore(Long id){
+        Category category = categoryRepository.findById(id)
+                .orElseThrow(()-> new BusinessException(ErrorCode.BAD_REQUEST,MessageError.CATEGORY_NOT_FOUND));
+        if(category.getStatus().equals(Status.ACTIVE)){
+            throw new BusinessException(ErrorCode.BAD_REQUEST,"Category is already active");
+        }
+        restoreRecursively(category);
+    }
+
+    private void restoreRecursively(Category category){
+        if(category.getParent() != null && category.getParent().getStatus().equals(Status.INACTIVE)){
+            restoreRecursively(category.getParent());
+        }
+        category.setStatus(Status.ACTIVE);
+        categoryRepository.save(category);
+    }
 
     @Transactional(rollbackFor = Exception.class)
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('CREATE_CATEGORIES')")

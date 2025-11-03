@@ -188,7 +188,7 @@ public class UserService {
 
     @Transactional
     public void verifyAccount(Long userId, String resetToken) {
-        User user = userRepository.findByIdAndStatus(userId,UserStatus.ACTIVE)
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.EXISTED,MessageError.USER_NOT_FOUND));
         boolean verify = otpService.verifyResetToken(userId , resetToken);
         if(verify){

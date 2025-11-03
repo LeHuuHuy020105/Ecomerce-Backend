@@ -24,6 +24,7 @@ public class OrderController {
     @GetMapping("/list")
     public ResponseEntity<Object> findAll(@RequestParam(required = false) String keyword,
                                           @RequestParam(required = false) String sort,
+                                          @RequestParam(required = true) boolean isAll,
                                           @RequestParam(defaultValue = "0") int page,
                                           @RequestParam(defaultValue = "10") int size,
                                           @RequestParam(required = false) DeliveryStatus deliveryStatus
@@ -31,13 +32,14 @@ public class OrderController {
         Map<String,Object> result = new LinkedHashMap<>();
         result.put("status", HttpStatus.OK.value());
         result.put("message","Order list");
-        result.put("data",orderService.findAllByUser(keyword,sort,page,size,deliveryStatus));
+        result.put("data",orderService.findAllByUser(keyword,sort,page,size,isAll,deliveryStatus));
         return new ResponseEntity<>(result,HttpStatus.OK);
     }
 
     @GetMapping("/admin/list")
     public ResponseEntity<Object> findAllByAdmin(@RequestParam(required = false) String keyword,
                                                  @RequestParam(required = false) String sort,
+                                                 @RequestParam(required = true) boolean isAll,
                                                  @RequestParam(defaultValue = "0") int page,
                                                  @RequestParam(defaultValue = "10") int size,
                                                  @RequestParam(required = false) DeliveryStatus deliveryStatus,
@@ -48,7 +50,7 @@ public class OrderController {
         Map<String,Object> result = new LinkedHashMap<>();
         result.put("status", HttpStatus.OK.value());
         result.put("message","order list");
-        result.put("data",orderService.findAllByAdmin(keyword,deliveryStatus,sort,page,size,startDate,endDate));
+        result.put("data",orderService.findAllByAdmin(keyword,isAll,deliveryStatus,sort,page,size,startDate,endDate));
         return new ResponseEntity<>(result,HttpStatus.OK);
     }
 

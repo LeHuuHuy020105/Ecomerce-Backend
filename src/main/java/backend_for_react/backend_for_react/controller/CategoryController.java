@@ -1,8 +1,10 @@
 package backend_for_react.backend_for_react.controller;
 
+import backend_for_react.backend_for_react.common.enums.Status;
 import backend_for_react.backend_for_react.controller.request.Category.CategoryCreationRequest;
 import backend_for_react.backend_for_react.controller.request.Category.CategoryUpdateRequest;
 import backend_for_react.backend_for_react.controller.request.Category.MoveCategoryRequest;
+import backend_for_react.backend_for_react.controller.response.ApiResponse;
 import backend_for_react.backend_for_react.service.CategoryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,12 +25,13 @@ public class CategoryController {
     @GetMapping("/list")
     public ResponseEntity<Object> findAll(@RequestParam(required = false) String keyword,
                                           @RequestParam(required = false) String sort,
+                                          @RequestParam(required = false) Status status,
                                           @RequestParam(defaultValue = "0") int page,
                                           @RequestParam(defaultValue = "10") int size){
         Map<String,Object> result = new LinkedHashMap<>();
         result.put("status", HttpStatus.OK.value());
         result.put("message","category list");
-        result.put("data",categoryService.findAll(keyword,sort,page,size));
+        result.put("data",categoryService.findAll(keyword,sort,status,page,size));
         return new ResponseEntity<>(result,HttpStatus.OK);
     }
 
@@ -42,26 +45,46 @@ public class CategoryController {
         return new ResponseEntity<>(result,HttpStatus.OK);
     }
 
+    @PostMapping("/{categoryId}/restore")
+    public ApiResponse<Void> restoreCategory(@PathVariable Long categoryId){
+        categoryService.restore(categoryId);
+        return ApiResponse.<Void>builder()
+                .status(HttpStatus.OK.value())
+                .message("category restored")
+                .build();
+    }
 
     @PostMapping("/add")
-    public ResponseEntity<Object> createCategory(@RequestBody List<@Valid CategoryCreationRequest> req){
+    public ApiResponse<Void> createCategory(@RequestBody List<@Valid CategoryCreationRequest> req){
         categoryService.save(req);
-        return new ResponseEntity<>("",HttpStatus.OK);
+        return ApiResponse.<Void>builder()
+                .status(HttpStatus.CREATED.value())
+                .message("category created")
+                .build();
     }
     @PostMapping("/move")
-    public ResponseEntity<Object> moveCategory(@RequestBody MoveCategoryRequest request){
+    public ApiResponse<Void> moveCategory(@RequestBody MoveCategoryRequest request){
         categoryService.moveCategory(request);
-        return new ResponseEntity<>("",HttpStatus.OK);
+        return ApiResponse.<Void>builder()
+                .status(HttpStatus.OK.value())
+                .message("category moved")
+                .build();
     }
     @PutMapping("/update")
-    public ResponseEntity<String> updateCategory (@RequestBody CategoryUpdateRequest req){
+    public ApiResponse<Void> updateCategory (@RequestBody CategoryUpdateRequest req){
         categoryService.update(req);
-        return new ResponseEntity<>("",HttpStatus.OK);
+        return ApiResponse.<Void>builder()
+                .status(HttpStatus.OK.value())
+                .message("category updated")
+                .build();
     }
     @DeleteMapping("/{categoryId}/delete")
-    public ResponseEntity<String> deleteCategory (@PathVariable Long categoryId){
+    public ApiResponse<Void> deleteCategory (@PathVariable Long categoryId){
         categoryService.delete(categoryId);
-        return new ResponseEntity<>("",HttpStatus.OK);
+        return ApiResponse.<Void>builder()
+                .status(HttpStatus.OK.value())
+                .message("category deleted")
+                .build();
     }
 
     @GetMapping("/{categoryId}")

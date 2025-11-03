@@ -13,13 +13,17 @@ import java.util.Optional;
 
 @Repository
 public interface CategoryRepository extends JpaRepository<Category,Long> {
-    @Query(value = "select u from Category u where u.status= 'ACTIVE' AND (u.name like:keyword) ")
-    Page<Category> searchByKeyword(String keyword, Pageable pageable);
+    @Query(value = "select u from Category u where u.status= :status AND (u.name like:keyword) ")
+    Page<Category> searchByKeyword(String keyword, Status status, Pageable pageable);
+
+    @Query(value = "select u from Category u where (u.name like:keyword) ")
+    Page<Category> searchByKeyword(String keyword,Pageable pageable);
 
     List<Category> findCategoriesByParentAndStatus(Category parent , Status status);
 
     List<Category> findByParent_Id(Long parentId);
 
+    Page<Category> findAllByStatus(Status status, Pageable pageable);
 
     Optional<Category> findByIdAndStatus(Long categoryId , Status status);
 }

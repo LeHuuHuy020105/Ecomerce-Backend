@@ -27,6 +27,14 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     Page<Order> searchByKeywordAndUser(@Param("keyword") String keyword, Pageable pageable, User user);
 
     @Query("""
+    SELECT o FROM Order o
+    LEFT JOIN o.orderItems i
+    WHERE LOWER(i.nameProductSnapShot) LIKE :keyword OR o.orderStatus = :orderStatus
+    """)
+    Page<Order> searchByKeywordAndUser(@Param("keyword") String keyword, Pageable pageable, User user , DeliveryStatus orderStatus);
+
+    Page<Order> findAllByUser(User user, Pageable pageable);
+    @Query("""
         SELECT DISTINCT o FROM Order o
         WHERE
             (
@@ -40,6 +48,24 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     Page<Order> searchByKeywordAndFilter(
             @Param("keyword") String keyword,
             @Param("orderStatus") DeliveryStatus orderStatus,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate,
+            Pageable pageable
+    );
+
+
+    @Query("""
+        SELECT DISTINCT o FROM Order o
+        WHERE
+            (
+                LOWER(o.customerName) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                OR LOWER(o.orderTrackingCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            )
+            AND (:startDate IS NULL OR o.createdAt >= :startDate)
+            AND (:endDate IS NULL OR o.createdAt <= :endDate)
+        """)
+    Page<Order> searchByKeywordAndFilter(
+            @Param("keyword") String keyword,
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate,
             Pageable pageable

@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
+import java.math.BigDecimal;
+
 @Entity
 @Getter
 @Setter
@@ -13,7 +15,7 @@ import lombok.experimental.FieldDefaults;
 @AllArgsConstructor
 @Table(name = "cart")
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class Cart {
+public class Cart extends BaseEntity{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
@@ -27,6 +29,11 @@ public class Cart {
     ProductVariant productVariant;
 
     Integer quantity;
+
+    private BigDecimal listPriceSnapShot;
+    private String nameProductSnapShot;
+    private String urlImageSnapShot;
+    private String variantAttributesSnapshot;
 
     @Enumerated(EnumType.STRING)
     Status status;

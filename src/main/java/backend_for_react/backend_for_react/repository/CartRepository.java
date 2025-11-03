@@ -1,5 +1,6 @@
 package backend_for_react.backend_for_react.repository;
 
+import backend_for_react.backend_for_react.common.enums.Status;
 import backend_for_react.backend_for_react.model.Cart;
 import backend_for_react.backend_for_react.model.Product;
 import backend_for_react.backend_for_react.model.ProductVariant;
@@ -16,4 +17,6 @@ import java.util.Optional;
 public interface CartRepository extends JpaRepository<Cart, Long> {
     Page<Cart> findAllByUser(User user, Pageable pageable);
     Optional<Cart> findByUserAndProductVariant(User user, ProductVariant productVariant);
+
+    Optional<Cart> findByIdAndStatus(Long id, Status status);
 }

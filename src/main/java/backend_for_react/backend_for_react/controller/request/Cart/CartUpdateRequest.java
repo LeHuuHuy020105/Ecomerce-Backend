@@ -6,6 +6,5 @@ import javax.swing.*;
 
 @Data
 public class CartUpdateRequest {
-    private Long productVariantId;
     private Integer quantity;
 }
