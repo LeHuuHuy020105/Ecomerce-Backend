@@ -34,5 +34,8 @@ public class UserCreationAddressRequest {
     @NotBlank(message = "address must be not blank")
     private String streetAddress;
 
+    @NotNull(message = "set defautl address must be not null")
+    private boolean isDefaultAddress;
+
     private AddressType addressType;
 }

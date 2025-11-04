@@ -18,6 +18,8 @@ import backend_for_react.backend_for_react.model.*;
 import backend_for_react.backend_for_react.repository.*;
 import backend_for_react.backend_for_react.service.GhnService;
 import backend_for_react.backend_for_react.service.VoucherService;
+import backend_for_react.backend_for_react.state.Order.OrderState;
+import backend_for_react.backend_for_react.state.Order.OrderStateFactory;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -267,32 +269,23 @@ public class OrderService {
 
     @Transactional(rollbackFor = Exception.class)
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('CHANGE_STATUS_ORDER')")
-    public void changeStatus(Long orderId, DeliveryStatus status) {
+    public void changeStatus(Long orderId, DeliveryStatus nextStatus) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_EXISTED, MessageError.ORDER_NOT_FOUND));
-        if(order.getOrderStatus().equals(DeliveryStatus.CANCELLED)){
-            if(!status.equals(DeliveryStatus.REFUNDED)){
-                throw new BusinessException(ErrorCode.BAD_REQUEST," You can't change status order cancelled");
-            }
+
+        // Check thanh toán chuyển khoản chưa trả tiền
+        if (order.getPaymentType() == PaymentType.BANK_TRANSFER &&
+                order.getPaymentStatus() == PaymentStatus.UNPAID) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST,
+                    "You can't change status for unpaid bank transfer order");
         }
-        if(order.getPaymentType().equals(PaymentType.BANK_TRANSFER) && order.getPaymentStatus().equals(PaymentStatus.UNPAID)){
-            throw new BusinessException(ErrorCode.BAD_REQUEST," You can't change status with order bank tranfer unpaid");
-        }
-        if(order.getOrderStatus().equals(DeliveryStatus.CANCELLED)){
-            throw new BusinessException(ErrorCode.BAD_REQUEST," You can't change status with order cancelled");
-        }
-        if(status.equals(DeliveryStatus.COMPLETED)){
-            if(order.getOrderTrackingCode() == null){
-                throw new BusinessException(ErrorCode.BAD_REQUEST,"The order has not been delivered to the shipping unit yet");
-            }
-            order.setPaymentStatus(PaymentStatus.PAID);
-        }
-        if(status == DeliveryStatus.DELIVERED) {
-            order.setDeliveredAt(LocalDateTime.now());
-        }
-        order.setOrderStatus(status);
+
+        OrderState currentState = OrderStateFactory.getState(order.getOrderStatus());
+        currentState.changeState(order, nextStatus);
+
         orderRepository.save(order);
     }
+
 
     @Transactional(rollbackFor = Exception.class)
     public void completeOrder(Long orderId) {

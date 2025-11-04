@@ -2,6 +2,8 @@ package backend_for_react.backend_for_react.controller;
 
 import backend_for_react.backend_for_react.controller.request.Review.ReviewCreationRequest;
 import backend_for_react.backend_for_react.controller.request.Review.ReviewUpdateRequest;
+import backend_for_react.backend_for_react.controller.response.ApiResponse;
+import backend_for_react.backend_for_react.controller.response.ReviewResponse;
 import backend_for_react.backend_for_react.service.impl.ReviewService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -35,6 +37,16 @@ public class ReviewController {
             @RequestBody ReviewUpdateRequest req) {
         reviewService.update(req);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/product/{productId}")
+    public ApiResponse<ReviewResponse> getReviewMeByProduct(@PathVariable Long productId) {
+        var result = reviewService.getReviewMeByProduct(productId);
+        return ApiResponse.<ReviewResponse>builder()
+                .status(HttpStatus.OK.value())
+                .message("Get review me by product")
+                .data(result)
+                .build();
     }
 
     @PutMapping("/delete-image")

@@ -21,6 +21,7 @@ import backend_for_react.backend_for_react.model.*;
 import backend_for_react.backend_for_react.repository.*;
 import backend_for_react.backend_for_react.service.impl.OrderService;
 import backend_for_react.backend_for_react.service.impl.UserService;
+import backend_for_react.backend_for_react.state.ReturnOrder.ReturnOrderContext;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -196,66 +197,16 @@ public class ReturnOrderService {
 
     @Transactional(rollbackFor = Exception.class)
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('CHANGE_STATUS_RETURN_ORDER')")
-    public void changeStatus(Long returnOrderId, ReturnStatus status) {
-        // Lấy thông tin đơn hoàn
-        ReturnOrder returnOrder = returnOrderRepository.findById(returnOrderId)
+    public void changeStatus(Long returnOrderId, ReturnStatus newStatus) {
+        ReturnOrder order = returnOrderRepository.findById(returnOrderId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.BAD_REQUEST, "Return order not found"));
-        if(returnOrder.getStatus().equals(ReturnStatus.CANCEL)){{
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "Return order cancelled");
-        }}
-        // Xử lý theo từng trạng thái
-        switch (status) {
-            case APPROVED -> {
-                // Đánh dấu duyệt
-                returnOrder.setStatus(ReturnStatus.APPROVED);
-                ghnService.createShippingReturnOrder(returnOrderId,"CHOTHUHANG");
-                returnOrder.setApprovedAt(LocalDateTime.now());
-            }
 
-            case SHIPPING_BACK -> {
-                returnOrder.setStatus(ReturnStatus.SHIPPING_BACK);
-            }
+        ReturnOrderContext context = new ReturnOrderContext(order,productVariantRepository,ghnService);
+        context.changeState(newStatus);
 
-            case COMPLETED -> {
-                // GHN báo đã nhận hàng thành công
-                returnOrder.setStatus(ReturnStatus.COMPLETED);
-                // Tính số tiền hoàn lại cho user
-
-                BigDecimal refundAmount = BigDecimal.ZERO;
-                for(ReturnOrderItem returnOrderItem : returnOrder.getReturnOrderItems()){
-                    if(returnOrderItem.getQuantity() > returnOrderItem.getOrderItem().getQuantity()){
-                        throw new BusinessException(ErrorCode.BAD_REQUEST, "Return order exceeds order item quantity");
-                    }
-                    refundAmount = refundAmount.add(returnOrderItem.getOrderItem().getFinalPrice()
-                            .multiply(BigDecimal.valueOf(returnOrderItem.getQuantity())));
-                }
-                refundAmount = refundAmount.add(returnOrder.getReturnShippingFee());
-                returnOrder.setRefundAmount(refundAmount);
-            }
-
-            case PAYMENTED -> {
-                // Đơn hoàn đã hoàn tất việc chuyển tiền về cho khách
-                returnOrder.setStatus(ReturnStatus.PAYMENTED);
-                returnOrder.setPaymentAt(LocalDateTime.now());
-
-                for(ReturnOrderItem returnOrderItem : returnOrder.getReturnOrderItems()){
-                    ProductVariant productVariant = returnOrderItem.getOrderItem().getProductVariant();
-                    productVariant.setQuantity(productVariant.getQuantity() + returnOrderItem.getQuantity());
-                    productVariantRepository.save(productVariant);
-                }
-            }
-
-            case REJECTED -> {
-                // Từ chối yêu cầu hoàn hàng
-                returnOrder.setStatus(ReturnStatus.REJECTED);
-            }
-
-            default -> throw new BusinessException(ErrorCode.BAD_REQUEST, "Unsupported return order status");
-        }
-
-        // Lưu lại thay đổi
-        returnOrderRepository.save(returnOrder);
+        returnOrderRepository.save(order);
     }
+
 
     @Transactional(rollbackFor = Exception.class)
     public void cancelReturnOrder(Long returnOrderId) {

@@ -270,6 +270,7 @@ public class UserService {
 
         UserHasAddress userHasAddress = new UserHasAddress();
         userHasAddress.setUser(user);
+        userHasAddress.setIsDefault(req.isDefaultAddress());
         userHasAddress.setAddress(newAddress);
         userHasAddress.setIsDefault(true);
         userHasAddress.setStatus(Status.ACTIVE);
@@ -277,6 +278,7 @@ public class UserService {
             userHasAddress.setAddressType(req.getAddressType());
         }
 
+        userHasAddressRepository.updateAllIsDefaultFalse(user.getId());
         userHasAddressRepository.save(userHasAddress);
     }
 

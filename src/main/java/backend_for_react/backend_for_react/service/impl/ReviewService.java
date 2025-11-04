@@ -43,7 +43,7 @@ public class ReviewService {
         // Truy vấn OrderItem đảm bảo thuộc về user
         OrderItem orderItem = orderItemRepository.findByIdAndUserId(req.getOrderItemId(), currentUser.getId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED, "You are not allowed to review this item"));
-        if(!orderItem.getOrder().getOrderStatus().equals(DeliveryStatus.CONFIRMED)){
+        if(!orderItem.getOrder().getOrderStatus().equals(DeliveryStatus.COMPLETED)){
             throw new BusinessException(ErrorCode.INVALID_OPERATION, "You can only review after delivery");
         }
         if (reviewRepository.existsByOrderItemId(orderItem.getId())) {
@@ -70,6 +70,18 @@ public class ReviewService {
         updateProductAvgRating(review.getProduct().getId());
 
         return review.getId();
+    }
+
+    public ReviewResponse getReviewMeByProduct(Long productId){
+        User currentUser = securityUtils.getCurrentUser();
+        Product product = productRepository.findByIdAndProductStatus(productId,ProductStatus.ACTIVE)
+                .orElseThrow(()-> new BusinessException(ErrorCode.BAD_REQUEST,MessageError.PRODUCT_NOT_FOUND));
+        Review review = reviewRepository.findByProductAndStatus(product,Status.ACTIVE)
+                .orElseThrow(()-> new BusinessException(ErrorCode.BAD_REQUEST,"Review not found"));
+        if(review.getUser() != currentUser){
+            throw new BusinessException(ErrorCode.BAD_REQUEST,"Review does not belong to this user");
+        }
+        return getReviewResponse(review);
     }
     private void updateProductAvgRating(Long productId) {
         Double avgRating = reviewRepository.findAverageRatingByProductId(productId);

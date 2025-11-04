@@ -31,7 +31,7 @@ public class CartController {
                                                          @RequestParam(defaultValue = "10") int size) {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("status", HttpStatus.OK.value());
-        result.put("message", "user list");
+        result.put("message", "cart list");
         result.put("data", cartService.getCarts(sort, page, size));
         return new ResponseEntity<>(result, HttpStatus.OK);
     }
