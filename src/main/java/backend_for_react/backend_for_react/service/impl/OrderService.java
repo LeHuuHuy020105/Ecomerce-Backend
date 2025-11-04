@@ -34,7 +34,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -156,21 +158,28 @@ public class OrderService {
         }
 
 
+        Map<Long, Integer> mergedVariants = new HashMap<>();
+        for (OrderItemCreationRequest itemReq : req.getOrderItems()) {
+            mergedVariants.merge(itemReq.getProductVariantId(), itemReq.getQuantity(), Integer::sum);
+        }
+
 
         // Tạo order item
         BigDecimal subTotal = BigDecimal.ZERO;
         List<OrderItem> orderItems = new ArrayList<>();
 
-        for (OrderItemCreationRequest orderItemReq : req.getOrderItems()) {
-            ProductVariant productVariant = productVariantRepository.findByIdAndStatus(orderItemReq.getProductVariantId(), Status.ACTIVE)
+        for (Map.Entry<Long, Integer> entry : mergedVariants.entrySet()) {
+            Long variantId = entry.getKey();
+            Integer totalQuantity = entry.getValue();
+            ProductVariant productVariant = productVariantRepository.findByIdAndStatus(variantId, Status.ACTIVE)
                     .orElseThrow(() -> new BusinessException(ErrorCode.NOT_EXISTED, MessageError.PRODUCT_VARIANT_NOT_FOUND));
 
-            if (orderItemReq.getQuantity() > productVariant.getQuantity()) {
+            if (totalQuantity> productVariant.getQuantity()) {
                 throw new BusinessException(ErrorCode.BAD_REQUEST, "Product exceeds quantity");
             }
 
             // Cập nhật tồn kho
-            productVariant.setQuantity(productVariant.getQuantity() - orderItemReq.getQuantity());
+            productVariant.setQuantity(productVariant.getQuantity() - totalQuantity);
             productVariantRepository.save(productVariant);
 
             // Tạo order item
@@ -180,9 +189,9 @@ public class OrderService {
             orderItem.setNameProductSnapShot(productVariant.getProduct().getName());
             orderItem.setVariantAttributesSnapshot(ProductVariantMapper.buildVariantName(productVariant));
             orderItem.setProductVariant(productVariant);
-            orderItem.setQuantity(orderItemReq.getQuantity());
+            orderItem.setQuantity(totalQuantity);
 
-            BigDecimal itemTotal = productVariant.getPrice().multiply(BigDecimal.valueOf(orderItemReq.getQuantity()));
+            BigDecimal itemTotal = productVariant.getPrice().multiply(BigDecimal.valueOf(totalQuantity));
             subTotal = subTotal.add(itemTotal);
 
             // Tạm gán finalPrice = giá gốc (chưa trừ voucher)
@@ -261,9 +270,16 @@ public class OrderService {
     public void changeStatus(Long orderId, DeliveryStatus status) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_EXISTED, MessageError.ORDER_NOT_FOUND));
-
+        if(order.getOrderStatus().equals(DeliveryStatus.CANCELLED)){
+            if(!status.equals(DeliveryStatus.REFUNDED)){
+                throw new BusinessException(ErrorCode.BAD_REQUEST," You can't change status order cancelled");
+            }
+        }
         if(order.getPaymentType().equals(PaymentType.BANK_TRANSFER) && order.getPaymentStatus().equals(PaymentStatus.UNPAID)){
             throw new BusinessException(ErrorCode.BAD_REQUEST," You can't change status with order bank tranfer unpaid");
+        }
+        if(order.getOrderStatus().equals(DeliveryStatus.CANCELLED)){
+            throw new BusinessException(ErrorCode.BAD_REQUEST," You can't change status with order cancelled");
         }
         if(status.equals(DeliveryStatus.COMPLETED)){
             if(order.getOrderTrackingCode() == null){
@@ -283,6 +299,9 @@ public class OrderService {
         User currentUser = securityUtils.getCurrentUser();
         Order order = orderRepository.findOrderByIdAndUser(orderId,currentUser)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_EXISTED,"Order not found or not yours"));
+        if(order.getOrderStatus().equals(DeliveryStatus.CANCELLED)){
+            throw new BusinessException(ErrorCode.BAD_REQUEST," You can't complete order cancelled");
+        }
        if(!order.getOrderStatus().equals(DeliveryStatus.COMPLETED)){
            throw new BusinessException(ErrorCode.BAD_REQUEST,"Order is not completed");
        }
@@ -324,6 +343,8 @@ public class OrderService {
                 productVariant.setQuantity(productVariant.getQuantity() + orderItem.getQuantity());
                 productVariantRepository.save(productVariant);
             }
+            order.setOrderStatus(DeliveryStatus.CANCELLED);
+            orderRepository.save(order);
         }else {
             throw new BusinessException(ErrorCode.BAD_REQUEST,"Can't cancel order");
         }
@@ -340,6 +361,7 @@ public class OrderService {
             throw new BusinessException(ErrorCode.BAD_REQUEST , "This order is PAID.");
         }
         order.setPaymentStatus(PaymentStatus.PAID);
+        order.setPaymentAt(LocalDateTime.now());
         orderRepository.save(order);
     }
     public OrderResponse getOrderById(Long orderId) {

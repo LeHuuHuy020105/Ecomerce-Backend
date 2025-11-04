@@ -11,6 +11,7 @@ import backend_for_react.backend_for_react.model.ProductVariant;
 import backend_for_react.backend_for_react.model.VariantAttributeValue;
 
 import java.util.List;
+import java.util.StringJoiner;
 
 public class ProductVariantMapper {
 
@@ -49,15 +50,15 @@ public class ProductVariantMapper {
                 .build();
     }
 
-    public static String buildVariantName(ProductVariant productVariant){
-        StringBuilder result = new StringBuilder();
-        for(VariantAttributeValue variantAttributeValue : productVariant.getAttributeValues()){
-            result.append(variantAttributeValue.getAttributeValue().getAttribute().getName());
-            result.append(":");
-            result.append(variantAttributeValue.getAttributeValue().getValue());
-            result.append(",");
+    public static String buildVariantName(ProductVariant productVariant) {
+        StringJoiner joiner = new StringJoiner(", ");
+        for (VariantAttributeValue vav : productVariant.getAttributeValues()) {
+            String part = vav.getAttributeValue().getAttribute().getName()
+                    + ":" + vav.getAttributeValue().getValue();
+            joiner.add(part);
         }
-        return result.toString();
+        return joiner.toString();
     }
+
 }
 

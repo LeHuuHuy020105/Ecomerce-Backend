@@ -4,6 +4,7 @@ import backend_for_react.backend_for_react.common.enums.ReturnStatus;
 import backend_for_react.backend_for_react.controller.request.ReturnOrder.ReturnOrderCreationRequest;
 import backend_for_react.backend_for_react.controller.response.ApiResponse;
 import backend_for_react.backend_for_react.service.ReturnOrderService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,7 +20,7 @@ public class ReturnOrderController {
     private final ReturnOrderService returnOrderService;
 
     @PostMapping("/add")
-    public ApiResponse<Void> add(@RequestBody ReturnOrderCreationRequest request){
+    public ApiResponse<Void> add(@RequestBody @Valid ReturnOrderCreationRequest request){
         returnOrderService.save(request);
         return ApiResponse.<Void>builder()
                 .status(HttpStatus.CREATED.value())

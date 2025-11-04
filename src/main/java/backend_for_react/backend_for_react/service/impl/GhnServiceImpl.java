@@ -97,6 +97,9 @@ public class GhnServiceImpl implements GhnService {
         log.info("Create shipping order");
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(()-> new BusinessException(ErrorCode.BAD_REQUEST, MessageError.ORDER_NOT_FOUND));
+        if(order.getOrderStatus().equals(DeliveryStatus.CANCELLED)){
+            throw new BusinessException(ErrorCode.BAD_REQUEST,"Order is cancelled");
+        }
         if(!order.getOrderStatus().equals(DeliveryStatus.SHIPPED)){
             throw new BusinessException(ErrorCode.BAD_REQUEST,"Order status must be SHIPPED");
         }
@@ -182,7 +185,9 @@ public class GhnServiceImpl implements GhnService {
     public ShippingOrderDetailResponse createShippingReturnOrder(Long returnOrderId ,String requiredNote) {
         ReturnOrder returnOrder = returnOrderRepository.findById(returnOrderId)
                 .orElseThrow(()-> new BusinessException(ErrorCode.BAD_REQUEST, "Return Order not found"));
-
+        if(returnOrder.getStatus().equals(ReturnStatus.CANCEL)){
+            throw new BusinessException(ErrorCode.BAD_REQUEST,"Return Order cancelled");
+        }
         ShippingOrderRequest req = toShippingReturnOrderRequest(returnOrder);
         String url = deliveryConfig.getBaseUrl() + "/v2/shipping-order/create";
 
@@ -204,7 +209,7 @@ public class GhnServiceImpl implements GhnService {
         body.put("height", req.getHeight());
         body.put("service_id", req.getServiceId());
         body.put("required_note", requiredNote);
-        body.put("payment_type_id",2);
+        body.put("payment_type_id",1);
         body.put("items", req.getItems());
 
         log.info("body: {}", body);

@@ -30,7 +30,6 @@ public class ReturnOrderResponse {
     private List<ReturnOrderItemResponse> returnOrderItemResponses;
     private String returnTrackingCode;
     private BigDecimal returnShippingFee;
-    private Boolean isReturnShippingPaidByUser;
     private LocalDateTime requestedAt;
     private LocalDateTime approvedAt;
     private LocalDateTime paymentAt;

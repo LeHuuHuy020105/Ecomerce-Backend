@@ -96,13 +96,14 @@ public class ReturnOrderService {
 
         // Kiểm tra trạng thái đơn hàng
 
-        if(order.getOrderStatus().equals(DeliveryStatus.COMPLETED)){
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "Order is already completed . You cannot return order");
+        if(order.isConfirmed()){
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Order is already confirm . You cannot return order");
         }
 
-        if (!order.getOrderStatus().equals(DeliveryStatus.DELIVERED)) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "Order status invalid to return");
+        if (!order.getOrderStatus().equals(DeliveryStatus.COMPLETED)) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Order status must be COMPLETED");
         }
+
 
         // Kiểm tra thời gian được phép hoàn hàng (7 ngày)
         LocalDateTime deliveredAt = order.getDeliveredAt();
@@ -122,7 +123,6 @@ public class ReturnOrderService {
         returnOrder.setStatus(ReturnStatus.REQUESTED);
         returnOrder.setReason(request.getReason());
         returnOrder.setRequestedAt(LocalDateTime.now());
-        returnOrder.setIsReturnShippingPaidByUser(request.isReturnShippingPaidByUser());
 
         BigDecimal refundAmount = BigDecimal.ZERO;
         List<ReturnOrderItem> returnItems = new ArrayList<>();
@@ -131,7 +131,9 @@ public class ReturnOrderService {
         for (ReturnOrderCreationRequest.ReturnItemRequest itemRequest : request.getItems()) {
             OrderItem orderItem = orderItemRepository.findById(itemRequest.getOrderItemId())
                     .orElseThrow(() -> new BusinessException(ErrorCode.BAD_REQUEST, "Order item not found"));
-
+            if(!orderItem.getOrder().equals(order)){
+                throw new BusinessException(ErrorCode.BAD_REQUEST,"Order item is not part of the order");
+            }
             int availableToReturn = orderItem.getQuantity() - orderItem.getReturnedQuantity();
             if (availableToReturn <= 0) {
                 throw new BusinessException(ErrorCode.BAD_REQUEST, "Item already fully returned");
@@ -198,7 +200,9 @@ public class ReturnOrderService {
         // Lấy thông tin đơn hoàn
         ReturnOrder returnOrder = returnOrderRepository.findById(returnOrderId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.BAD_REQUEST, "Return order not found"));
-
+        if(returnOrder.getStatus().equals(ReturnStatus.CANCEL)){{
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Return order cancelled");
+        }}
         // Xử lý theo từng trạng thái
         switch (status) {
             case APPROVED -> {
@@ -306,7 +310,6 @@ public class ReturnOrderService {
                 .reason(returnOrder.getReason())
                 .imageReturnOrders(imageReturnOrderResponses)
                 .returnTrackingCode(returnOrder.getReturnTrackingCode())
-                .isReturnShippingPaidByUser(returnOrder.getIsReturnShippingPaidByUser())
                 .requestedAt(returnOrder.getRequestedAt())
                 .approvedAt(returnOrder.getApprovedAt())
                 .paymentAt(returnOrder.getPaymentAt())

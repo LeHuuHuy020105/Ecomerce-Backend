@@ -59,8 +59,6 @@ public class ReturnOrder extends BaseEntity {
     @Column(precision = 15, scale = 2)
     private BigDecimal returnShippingFee = BigDecimal.ZERO;
 
-    // true = khách trả phí ship, false = shop trả
-    private Boolean isReturnShippingPaidByUser = true;
 
     // Mã vận đơn trả hàng (GHN/GHTK)
     private String returnTrackingCode;
