@@ -34,3 +34,4 @@ build/
 # bỏ qua file này
 .env.example
 mysql_data
+./src/main/resources/firebase.json
