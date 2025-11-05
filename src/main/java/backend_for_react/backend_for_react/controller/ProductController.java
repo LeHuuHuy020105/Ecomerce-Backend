@@ -42,6 +42,18 @@ public class ProductController {
         return new ResponseEntity<>(result,HttpStatus.OK);
     }
 
+    @GetMapping("/list/recommend")
+    public ResponseEntity<Object> findAllRecommend(@RequestParam(required = false) Long userId,
+                                          @RequestParam(required = false) String sort,
+                                          @RequestParam(defaultValue = "0") int page,
+                                          @RequestParam(defaultValue = "10") int size){
+        Map<String,Object> result = new LinkedHashMap<>();
+        result.put("status", HttpStatus.OK.value());
+        result.put("message","product list");
+        result.put("data",productService.getRecommendedProducts(userId,sort,page,size));
+        return new ResponseEntity<>(result,HttpStatus.OK);
+    }
+
     @GetMapping("/products/category/{id}")
     public ResponseEntity<PageResponse<ProductBaseResponse>> getByCategory(
             @PathVariable Long id,

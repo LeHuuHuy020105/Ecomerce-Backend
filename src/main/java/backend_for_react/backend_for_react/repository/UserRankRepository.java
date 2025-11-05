@@ -24,7 +24,7 @@ public interface UserRankRepository extends JpaRepository<UserRank, Long> {
     UserRank findTopEligibleRank(@Param("totalSpent") BigDecimal totalSpent);
 
 
-    @Query(value = "SELECT COALESCE(MAX(r.level), -1) FROM UserRank r" , nativeQuery = true)
+    @Query(value = "SELECT COALESCE(MAX(r.level), -1) FROM UserRank r", nativeQuery = true)
     Integer findMaxLevel();
 
     @Query(value = "select u from UserRank u where u.name like:keyword")

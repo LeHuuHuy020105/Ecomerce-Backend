@@ -3,6 +3,7 @@ package backend_for_react.backend_for_react.service.impl;
 import backend_for_react.backend_for_react.common.enums.ProductStatus;
 import backend_for_react.backend_for_react.common.enums.Status;
 import backend_for_react.backend_for_react.common.utils.CloudinaryHelper;
+import backend_for_react.backend_for_react.common.utils.SecurityUtils;
 import backend_for_react.backend_for_react.common.utils.TextUtils;
 import backend_for_react.backend_for_react.controller.request.Attribute.AttributeCreationRequest;
 import backend_for_react.backend_for_react.controller.request.AttributeValue.AttributeValueCreationRequest;
@@ -31,10 +32,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -50,7 +48,9 @@ public class ProductService {
     private final ProductVariantRepository productVariantRepository;
     private final AttributeValueRepository attributeValueRepository;
     private final VariantAttributeValueRepository variantAttributeValueRepository;
-    private final ImageProductDescriptionRepository imageProductDescriptionRepository;
+    private final SecurityUtils securityUtils;
+    private final UserBehaviorRepository userBehaviorRepository;
+
 
 
     public PageResponse<ProductBaseResponse> findAll(String keyword, String sort, int page, int size) {
@@ -126,6 +126,95 @@ public class ProductService {
         return response;
     }
 
+    /**
+     * Gợi ý sản phẩm có phân trang (Pageable - không phân trang thủ công)
+     */
+    public PageResponse<ProductBaseResponse> getRecommendedProducts(Long userId, String sort, int page, int size) {
+        log.info("Get recommended products for userId={}", userId);
+
+        // ✅ Xử lý sort string (vd: "avgRating:desc" hoặc "soldQuantity:asc")
+        Sort order = Sort.by(Sort.Direction.DESC, "id"); // mặc định
+        if (sort != null && !sort.isEmpty()) {
+            Pattern pattern = Pattern.compile("(\\w+?)(:)(asc|desc)", Pattern.CASE_INSENSITIVE);
+            Matcher matcher = pattern.matcher(sort);
+            if (matcher.find()) {
+                String column = matcher.group(1);
+                String direction = matcher.group(3);
+                order = Sort.by(direction.equalsIgnoreCase("asc") ?
+                        Sort.Direction.ASC : Sort.Direction.DESC, column);
+            }
+        }
+
+        int pageNo = 0;
+        if (page > 0) {
+            pageNo = page - 1;
+        }
+        Pageable pageable = PageRequest.of(pageNo, size, order);
+
+        Page<Product> resultPage;
+
+        // 🔹 Nếu user chưa đăng nhập → hiển thị sản phẩm bán chạy và yếu (guest)
+        if (userId == null) {
+            resultPage = productRepository.findRecommendedForGuest(pageable);
+        } else {
+            List<UserBehavior> behaviors = userBehaviorRepository.findByUserId(userId);
+            if (behaviors.isEmpty()) {
+                resultPage = productRepository.findRecommendedForGuest(pageable);
+            } else {
+                // Lấy danh sách category mà user tương tác
+                Set<Long> productIds = new HashSet<>();
+                behaviors.forEach(b -> productIds.add(b.getProduct().getId()));
+
+                List<String> categories = productRepository.findCategoryNamesByProductIds(productIds);
+
+                resultPage = productRepository.findRecommendedForUser(categories, pageable);
+            }
+        }
+
+        PageResponse response = getProductPageResponse(pageNo, size, resultPage);
+        return response;
+    }
+
+    /**
+     * Gợi ý cho khách vãng lai (chưa đăng nhập)
+     */
+    private List<Product> recommendForGuest() {
+        List<Product> top = productRepository.findTop20ByOrderBySoldQuantityDescAvgRatingDesc();
+        List<Product> low = productRepository.findTop10ByOrderBySoldQuantityAscAvgRatingAsc();
+
+        List<Product> mixed = new ArrayList<>(top);
+        mixed.addAll(low);
+        Collections.shuffle(mixed);
+        return mixed;
+    }
+
+    /**
+     * Gợi ý cho người dùng đã đăng nhập
+     */
+    private List<Product> recommendForUser(Long userId) {
+        List<UserBehavior> behaviors = userBehaviorRepository.findByUserId(userId);
+
+        if (behaviors.isEmpty()) {
+            return recommendForGuest();
+        }
+
+        // Lấy danh sách sản phẩm mà user từng tương tác
+        Set<Long> productIds = new HashSet<>();
+        behaviors.forEach(b -> productIds.add(b.getProduct().getId()));
+
+        // Lấy danh sách category liên quan
+        List<String> categories = productRepository.findCategoryNamesByProductIds(productIds);
+
+        // Lấy sản phẩm cùng loại và chất lượng cao
+        List<Product> related = productRepository.findTop50ByCategoryNamesAndSimilarPrice(categories);
+
+        // Thêm sản phẩm yếu để tăng cơ hội hiển thị
+        List<Product> low = productRepository.findTop10ByOrderBySoldQuantityAscAvgRatingAsc();
+
+        related.addAll(low);
+        Collections.shuffle(related);
+        return related;
+    }
 
     public PageResponse<ProductBaseResponse> findAllByCategory(
             Long categoryId, String keyword, String sort, int page, int size) {

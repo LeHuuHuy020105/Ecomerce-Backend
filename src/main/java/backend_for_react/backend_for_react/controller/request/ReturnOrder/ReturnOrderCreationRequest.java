@@ -12,6 +12,15 @@ public class ReturnOrderCreationRequest {
     @NotNull(message = "order id not blank")
     private Long orderId;
 
+    @NotNull(message = "length not be null")
+    private int length;
+    @NotNull(message = "weight not be null")
+    private int weight;
+    @NotNull(message = "height not be null")
+    private int height;
+    @NotNull(message = "width not be null")
+    private int width;
+
     @NotBlank(message = "reason not blank")
     private String reason;
 

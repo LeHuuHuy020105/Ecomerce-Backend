@@ -28,8 +28,6 @@ public class OrderResponse {
     String deliveryProvinceName;
     String deliveryWardCode;
     String deliveryAddress;
-    Integer serviceDeliveryId;
-    String serviceDeliveryName;
     BigDecimal totalAmount;
     BigDecimal originalOrderAmount;
     DeliveryStatus deliveryStatus;

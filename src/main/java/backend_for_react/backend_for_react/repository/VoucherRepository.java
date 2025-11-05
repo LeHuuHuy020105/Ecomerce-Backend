@@ -19,13 +19,13 @@ import java.util.Optional;
 @Repository
 public interface VoucherRepository extends JpaRepository<Voucher, Long> {
     @Query("SELECT v FROM Voucher v WHERE " +
-            "LOWER(v.code) LIKE :keyword OR LOWER(v.discription) LIKE :keyword")
+            "LOWER(v.discription) LIKE :keyword")
     Page<Voucher> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
 
     Page<Voucher> findByUserRank_NameAndUserRankStatus(String name, Pageable pageable , Status status);
 
     @Query("SELECT v FROM Voucher v WHERE " +
-            "(LOWER(v.code) LIKE :keyword OR LOWER(v.discription) LIKE :keyword) " +
+            "LOWER(v.discription) LIKE :keyword " +
             "AND (v.userRank.name = :rank and v.userRank.status ='ACTIVE')")
     Page<Voucher> searchByKeywordAndRank(@Param("keyword") String keyword,
                                          @Param("rank") String rank,
@@ -39,18 +39,31 @@ public interface VoucherRepository extends JpaRepository<Voucher, Long> {
             nativeQuery = true)
     Page<Voucher> searchByKeyword(@Param("keyword") String keyword, Pageable pageable , VoucherStatus status);
 
-
     @Query("""
-        SELECT v 
-        FROM Voucher v 
-        WHERE v.startDate <= :now 
-            AND v.endDate >= :now
-            AND v.totalQuantity >0 
-            AND v.userRank.status ='ACTIVE'
-            AND v.userRank.level <= :levelRank
-            AND v.userRank = null
+    SELECT v
+    FROM Voucher v
+    WHERE v.startDate <= :now
+      AND v.endDate >= :now
+      AND v.status = backend_for_react.backend_for_react.common.enums.VoucherStatus.ACTIVE
+      AND v.remainingQuantity > 0
+      AND v.userRank.level <= :userRankLevel
+      AND (
+            SELECT COUNT(vu)
+            FROM VoucherUsage vu
+            WHERE vu.voucher = v
+              AND vu.user = :user
+          ) < v.usageLimitPerUser
 """)
-    List<Voucher> findAllAvaiableForRank(@Param("now")LocalDateTime now , @Param("levelRank") Integer levelRank);
+    Page<Voucher> findAvailableForUser(
+            @Param("user") User user,
+            @Param("userRankLevel") Integer userRankLevel,
+            @Param("now") LocalDateTime now,
+            Pageable pageable
+    );
+
+
+
+
 
 
     boolean existsByUserRank(UserRank userRank);

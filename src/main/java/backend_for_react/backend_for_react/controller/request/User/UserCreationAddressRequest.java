@@ -9,6 +9,12 @@ import lombok.Data;
 @Data
 public class UserCreationAddressRequest {
 
+    @NotBlank(message = "Name must be not blank")
+    private String customerName;
+
+    @NotBlank(message = "Phone must be not blank")
+    private String customerPhone;
+
     @NotBlank(message = "province must be not blank")
     private String province;
 
@@ -34,8 +40,6 @@ public class UserCreationAddressRequest {
     @NotBlank(message = "address must be not blank")
     private String streetAddress;
 
-    @NotNull(message = "set defautl address must be not null")
-    private boolean isDefaultAddress;
 
     private AddressType addressType;
 }

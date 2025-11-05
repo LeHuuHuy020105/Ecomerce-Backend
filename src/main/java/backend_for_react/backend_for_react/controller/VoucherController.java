@@ -28,26 +28,17 @@ import java.util.Map;
 public class VoucherController {
     VoucherService voucherService;
 
+
     @GetMapping("/listForMe")
-    public ResponseEntity<Object> findAllForMe() {
+    public ResponseEntity<Object> findAll(@RequestParam(required = false) String sort,
+                                          @RequestParam(defaultValue = "0") int page,
+                                          @RequestParam(defaultValue = "10") int size) {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("status", HttpStatus.OK.value());
-        result.put("message", "user list");
-        result.put("data", voucherService.getAvailableVouchersForUser());
+        result.put("message", "voucher list");
+        result.put("data", voucherService.findAll(sort, page, size));
         return new ResponseEntity<>(result, HttpStatus.OK);
     }
-
-//    @GetMapping("/list")
-//    public ResponseEntity<Object> findAll(@RequestParam(required = false) String keyword,
-//                                          @RequestParam(required = false) String sort,
-//                                          @RequestParam(defaultValue = "0") int page,
-//                                          @RequestParam(defaultValue = "10") int size) {
-//        Map<String, Object> result = new LinkedHashMap<>();
-//        result.put("status", HttpStatus.OK.value());
-//        result.put("message", "voucher list");
-//        result.put("data", voucherService.findAll(keyword, sort, page, size));
-//        return new ResponseEntity<>(result, HttpStatus.OK);
-//    }
 
     @GetMapping("/admin/list")
     public ResponseEntity<Object> findAllByAdmin(@RequestParam(required = false) String keyword,

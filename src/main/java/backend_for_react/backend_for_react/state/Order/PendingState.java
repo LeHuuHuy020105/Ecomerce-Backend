@@ -6,6 +6,8 @@ import backend_for_react.backend_for_react.common.enums.PaymentType;
 import backend_for_react.backend_for_react.exception.BusinessException;
 import backend_for_react.backend_for_react.exception.ErrorCode;
 import backend_for_react.backend_for_react.model.Order;
+import backend_for_react.backend_for_react.model.VoucherUsage;
+import backend_for_react.backend_for_react.repository.VoucherUsageRepository;
 
 public class PendingState implements OrderState
 {
@@ -16,9 +18,6 @@ public class PendingState implements OrderState
         }
         switch (nextStatus){
             case CONFIRMED:
-                order.setOrderStatus(nextStatus);
-                break;
-            case CANCELLED:
                 order.setOrderStatus(nextStatus);
                 break;
             default:

@@ -266,11 +266,12 @@ public class UserService {
         newAddress.setProvinceId(req.getProvinceId());
         newAddress.setDistrictId(req.getDistrictId());
         newAddress.setWardId(req.getWardId());
+        newAddress.setCustomerName(req.getCustomerName());
+        newAddress.setPhoneNumber(req.getCustomerPhone());
         addressRepository.save(newAddress);
 
         UserHasAddress userHasAddress = new UserHasAddress();
         userHasAddress.setUser(user);
-        userHasAddress.setIsDefault(req.isDefaultAddress());
         userHasAddress.setAddress(newAddress);
         userHasAddress.setIsDefault(true);
         userHasAddress.setStatus(Status.ACTIVE);
@@ -299,6 +300,8 @@ public class UserService {
         if(req.getProvinceId() != null) address.setProvinceId(req.getProvinceId());
         if(req.getDistrictId() != null) address.setDistrictId(req.getDistrictId());
         if(req.getWardId() != null) address.setWardId(req.getWardId());
+        if(req.getCustomerName() != null) address.setCustomerName(req.getCustomerName());
+        if(req.getCustomerPhone() != null) address.setPhoneNumber(req.getCustomerPhone());
         userHasAddress.setAddress(address);
         if(req.getAddressType() != null) userHasAddress.setAddressType(req.getAddressType());
 

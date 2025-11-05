@@ -22,6 +22,9 @@ public class Address extends BaseEntity{
     @Column
     private String address;
 
+    private String customerName;
+    private String phoneNumber;
+
     @Column
     private String province;
 

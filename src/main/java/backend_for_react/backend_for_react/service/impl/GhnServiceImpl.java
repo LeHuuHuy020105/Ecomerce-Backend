@@ -7,6 +7,8 @@ import backend_for_react.backend_for_react.common.enums.PaymentType;
 import backend_for_react.backend_for_react.common.enums.ReturnStatus;
 import backend_for_react.backend_for_react.config.Delivery.DeliveryConfig;
 import backend_for_react.backend_for_react.controller.FeeResponse;
+import backend_for_react.backend_for_react.controller.request.ProductPackage.ProductPackage;
+import backend_for_react.backend_for_react.controller.request.ProductPackage.ProductPackageResponse;
 import backend_for_react.backend_for_react.controller.request.Shipping.*;
 import backend_for_react.backend_for_react.controller.response.ShippingOrderDetailResponse;
 import backend_for_react.backend_for_react.exception.BusinessException;
@@ -29,9 +31,12 @@ import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static backend_for_react.backend_for_react.common.utils.ShippingHelper.*;
 
 @Service
 @RequiredArgsConstructor
@@ -289,30 +294,39 @@ public class GhnServiceImpl implements GhnService {
 
         Map<String, Object> body = new HashMap<>();
         body.put("from_district_id", req.getFromDistrictId());
-        body.put("from_ward_code",req.getFromWardCode());
+        body.put("from_ward_code", req.getFromWardCode());
         body.put("to_district_id", req.getToDistrictId());
-        body.put("to_ward_code",req.getToWardCode());
-        body.put("service_id", req.getServiceId());
+        body.put("to_ward_code", req.getToWardCode());
+        body.put("service_type_id", req.getServiceTypeId());
         body.put("weight", req.getWeight());
-        body.put("height", req.getHeight());
-        body.put("width", req.getWidth());
-        body.put("length", req.getLength());
+        // Nếu là hàng nhẹ
+        if (req.getServiceTypeId() == 2) {
+            body.put("length", req.getLength());
+            body.put("width", req.getWidth());
+            body.put("height", req.getHeight());
+        }
 
+        // Nếu là hàng nặng
+        else if (req.getServiceTypeId() == 5) {
+            body.put("weight", req.getWeight());
+            body.put("items", req.getItems());
+        }
+
+        log.info("body: {}", body);
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, defaultHeadersProd());
         ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
 
         log.info("GHN Fee Response: {}", response.getBody());
 
         Map data = (Map) response.getBody().get("data");
-        FeeResponse res = FeeResponse.builder()
+        return FeeResponse.builder()
                 .shippingFee(new BigDecimal(data.get("total").toString()))
-                .insuranceFee(java.math.BigDecimal.ZERO)
+                .insuranceFee(BigDecimal.ZERO)
                 .total(new BigDecimal(data.get("total").toString()))
                 .raw(response.getBody())
                 .build();
-
-        return res;
     }
+
 
     @Override
     public void cancelShippingOrder(String ghnOrderCode) {
@@ -321,31 +335,79 @@ public class GhnServiceImpl implements GhnService {
 
     @Override
     public FeeRequest toFeeRequest(Order order) {
+        List<FeeRequest.ItemRequest> items = order.getOrderItems().stream()
+                .map(orderItem -> FeeRequest.ItemRequest.builder()
+                        .height(orderItem.getProductVariant().getHeight())
+                        .weight(orderItem.getProductVariant().getWeight())
+                        .width(orderItem.getProductVariant().getWidth())
+                        .name(orderItem.getNameProductSnapShot())
+                        .weight(orderItem.getProductVariant().getWeight())
+                        .build())
+                .toList();
         return FeeRequest.builder()
                 .fromDistrictId(fromDistrictId)
                 .fromWardCode(fromWardId)
-                .serviceId(order.getServiceDeliveryId())
+                .serviceTypeId(order.getServiceTypeId())
                 .toDistrictId(order.getDeliveryDistrictId())
                 .toWardCode(order.getDeliveryWardCode())
                 .weight(order.getWeight())
                 .height(order.getHeight())
                 .width(order.getWidth())
                 .length(order.getLength())
+                .items(items)
                 .build();
     }
 
+
+
     @Override
     public FeeRequest toFeeRequest(ReturnOrder returnOrder) {
+        List<FeeRequest.ItemRequest> items = returnOrder.getReturnOrderItems().stream()
+                .map(returnOrderItem -> FeeRequest.ItemRequest.builder()
+                        .height(returnOrderItem.getOrderItem().getProductVariant().getHeight())
+                        .weight(returnOrderItem.getOrderItem().getProductVariant().getWeight())
+                        .width(returnOrderItem.getOrderItem().getProductVariant().getWidth())
+                        .name(returnOrderItem.getOrderItem().getNameProductSnapShot())
+                        .weight(returnOrderItem.getOrderItem().getProductVariant().getWeight())
+                        .build())
+                .toList();
         return FeeRequest.builder()
                 .fromDistrictId(returnOrder.getOrder().getDeliveryDistrictId())
                 .fromWardCode(returnOrder.getOrder().getDeliveryWardCode())
-                .serviceId(53320)
+                .serviceTypeId(returnOrder.getServiceTyeId())
                 .toDistrictId(fromDistrictId)
                 .toWardCode(fromWardId)
                 .weight(returnOrder.getTotalWeight())
                 .height(returnOrder.getTotalHeight())
                 .width(returnOrder.getTotalWidth())
                 .length(returnOrder.getTotalLength())
+                .items(items)
+                .build();
+    }
+
+    @Override
+        public ProductPackageResponse getProductPackage(List<ProductPackage> packages) {
+        int length = calculateAverageLength(packages);
+        int width = calculateAverageWidth(packages);
+        int height = calculateAverageHeight(packages);
+        int weight = calculateTotalWeight(packages);
+        List<ProductPackageResponse.ItemResponse> itemResponses = packages.stream()
+                .map(item -> ProductPackageResponse.ItemResponse.builder()
+                        .nameProduct(item.getNameProduct())
+                        .weight(item.getWeight())
+                        .length(item.getLength())
+                        .width(item.getWidth())
+                        .height(item.getHeight())
+                        .quantity(item.getQuantity())
+                        .build())
+                .toList();
+        return ProductPackageResponse.builder()
+                .heightTotal(height)
+                .widthTotal(width)
+                .lengthTotal(length)
+                .weightTotal(weight)
+                .itemResponses(itemResponses)
+                .serviceTypeId(determineServiceTypeId(weight, length, width, height))
                 .build();
     }
 
@@ -361,7 +423,7 @@ public class GhnServiceImpl implements GhnService {
                 .deliveryAddress(order.getDeliveryAddress())
                 .deliveryContactName(order.getCustomerName())
                 .deliveryContactPhone(order.getCustomerPhone())
-                .serviceId(order.getServiceDeliveryId())
+                .serviceId(order.getServiceTypeId())
                 .weight(order.getWeight())
                 .length(order.getLength())
                 .width(order.getWidth())

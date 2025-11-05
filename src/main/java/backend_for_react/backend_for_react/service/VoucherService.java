@@ -33,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -47,37 +48,36 @@ public class VoucherService {
     UserRankRepository userRankRepository;
     SecurityUtils securityUtils;
 
-//    public PageResponse<VoucherResponse> findAll(String keyword, String sort, int page, int size){
-//        log.info("Find all vouchers ");
-//
-//        Sort order = Sort.by(Sort.Direction.ASC, "id");
-//        if (sort != null && !sort.isEmpty()) {
-//            Pattern pattern = Pattern.compile("(\\w+?)(:)(.*)"); //tencot:asc||desc
-//            Matcher matcher = pattern.matcher(sort);
-//            if (matcher.find()) {
-//                String columnName = matcher.group(1);
-//                if (matcher.group(3).equalsIgnoreCase("asc")) {
-//                    order = Sort.by(Sort.Direction.ASC, columnName);
-//                } else {
-//                    order = Sort.by(Sort.Direction.DESC, columnName);
-//                }
-//            }
-//        }
-//        int pageNo = 0;
-//        if (page > 0) {
-//            pageNo = page - 1;
-//        }
-//        Pageable pageable = PageRequest.of(pageNo, size, order);
-//        Page<Voucher> vouchers = null;
-//        if (keyword == null || keyword.isEmpty()) {
-//            vouchers = voucherRepository.findAllByStatus(VoucherStatus.ACTIVE,pageable);
-//        } else {
-//            keyword = "%" + keyword.toLowerCase() + "%";
-//            vouchers = voucherRepository.searchByKeyword(keyword, pageable,VoucherStatus.ACTIVE);
-//        }
-//        PageResponse response = getVoucherPageResponse(pageNo, size, vouchers);
-//        return response;
-//    }
+    public PageResponse<VoucherResponse> findAll(String sort, int page, int size){
+        log.info("Find all vouchers ");
+        User user = securityUtils.getCurrentUser();
+        Sort order = Sort.by(Sort.Direction.ASC, "id");
+        if (sort != null && !sort.isEmpty()) {
+            Pattern pattern = Pattern.compile("(\\w+?)(:)(.*)"); //tencot:asc||desc
+            Matcher matcher = pattern.matcher(sort);
+            if (matcher.find()) {
+                String columnName = matcher.group(1);
+                if (matcher.group(3).equalsIgnoreCase("asc")) {
+                    order = Sort.by(Sort.Direction.ASC, columnName);
+                } else {
+                    order = Sort.by(Sort.Direction.DESC, columnName);
+                }
+            }
+        }
+        int pageNo = 0;
+        if (page > 0) {
+            pageNo = page - 1;
+        }
+        Pageable pageable = PageRequest.of(pageNo, size, order);
+        Page<Voucher> vouchers = null;
+        if (user == null) {
+            vouchers = voucherRepository.findAllByStatus(VoucherStatus.ACTIVE,pageable);
+        } else {
+           vouchers = getAvailableVouchersForUser(user,pageable);
+        }
+        PageResponse response = getVoucherPageResponse(pageNo, size, vouchers);
+        return response;
+    }
 
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('VIEW_ALL_VOUCHER')")
     public PageResponse<VoucherResponse> findAllByAdmin(String keyword, String rank, String sort, int page, int size){
@@ -129,7 +129,6 @@ public class VoucherService {
     public void add(VoucherCreationRequest request) {
         log.info("request : {}" , request);
         Voucher voucher = new Voucher();
-        voucher.setCode(request.getCode());
         voucher.setDiscription(request.getDescription());
         voucher.setType(request.getType());
         voucher.setDiscountValue(request.getDiscountValue());
@@ -142,15 +141,10 @@ public class VoucherService {
         voucher.setUsedQuantity(0);
         voucher.setIsShipping(request.getIsShipping());
         voucher.setStatus(VoucherStatus.ACTIVE);
-
-        if(request.getUsageLimitPerUser() != null){
-            voucher.setUsageLimitPerUser(request.getUsageLimitPerUser());
-        }
-        if(request.getUserRankId() != null){
-            UserRank userRank = userRankRepository.findByIdAndStatus(request.getUserRankId(), Status.ACTIVE)
+        voucher.setUsageLimitPerUser(request.getUsageLimitPerUser());
+        UserRank userRank = userRankRepository.findByIdAndStatus(request.getUserRankId(), Status.ACTIVE)
                             .orElseThrow(()-> new BusinessException(ErrorCode.BAD_REQUEST,"User rank not found"));
-            voucher.setUserRank(userRank);
-        }
+        voucher.setUserRank(userRank);
         voucherRepository.save(voucher);
     }
 
@@ -158,9 +152,6 @@ public class VoucherService {
     public void update(VoucherUpdateRequest request){
         Voucher voucher = voucherRepository.findByIdAndStatus(request.getId(),VoucherStatus.ACTIVE)
                 .orElseThrow(()-> new BusinessException(ErrorCode.BAD_REQUEST , MessageError.VOUCHER_NOT_FOUND));
-        if(request.getCode() != null){
-            voucher.setCode(request.getCode());
-        }
         if(request.getDiscription() != null){
             voucher.setDiscription(request.getDiscription());
         }
@@ -226,16 +217,14 @@ public class VoucherService {
         }
         return true;
     }
+
     @Transactional(readOnly = true)
     public boolean validateVoucherUsageUser(Voucher voucher, User user) {
         log.info("voucher : {} user : {}", voucher.getId(), user != null ? user.getId() : null);
 
         // Nếu chưa đăng nhập
         if (user == null) {
-            if (voucher.getUserRank() != null) {
-                throw new BusinessException(ErrorCode.BAD_REQUEST, "You must login to use this voucher");
-            }
-            return true; // Voucher không yêu cầu rank => cho phép
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "You must login to use this voucher");
         }
 
         // Nếu voucher yêu cầu rank
@@ -266,17 +255,11 @@ public class VoucherService {
         return true;
     }
 
-    public List<VoucherResponse> getAvailableVouchersForUser(){
-        User user = securityUtils.getCurrentUser();
+    public Page<Voucher> getAvailableVouchersForUser(User user , Pageable pageable){
         LocalDateTime now = LocalDateTime.now();
         log.info("User rank : {} " , user.getUserRank());
-        Integer userLevel = user.getUserRank().getLevel();
-        List<Voucher> allValidVouchers = voucherRepository.findAllAvaiableForRank(now, userLevel);
-        List<VoucherResponse> result = allValidVouchers.stream()
-                .filter(voucher -> validateVoucherUsageUser(voucher,user))
-                .map(VoucherMapper::toVoucherResponse)
-                .toList();
-        return result;
+        Page<Voucher> allValidVouchers = voucherRepository.findAvailableForUser(user,user.getUserRank().getLevel(),now,pageable);
+        return allValidVouchers;
     }
     public BigDecimal calculateDiscountValue(BigDecimal orderAmount , Voucher voucher){
         BigDecimal discount;

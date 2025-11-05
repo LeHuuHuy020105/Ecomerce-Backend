@@ -20,6 +20,10 @@ public class VoucherUsage {
     @ManyToOne
     private User user;
 
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "order_id", nullable = false, unique = true)
+    private Order order;
+
     @CreationTimestamp
     private LocalDateTime usedAt;
 }

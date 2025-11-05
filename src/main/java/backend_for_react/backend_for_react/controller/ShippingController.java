@@ -2,14 +2,19 @@ package backend_for_react.backend_for_react.controller;
 
 
 
+import backend_for_react.backend_for_react.controller.request.ProductPackage.ProductPackage;
+import backend_for_react.backend_for_react.controller.request.ProductPackage.ProductPackageResponse;
 import backend_for_react.backend_for_react.controller.request.Shipping.FeeRequest;
 import backend_for_react.backend_for_react.controller.request.Shipping.ShippingOrderRequest;
 import backend_for_react.backend_for_react.controller.response.ApiResponse;
 import backend_for_react.backend_for_react.controller.response.ShippingOrderDetailResponse;
 import backend_for_react.backend_for_react.service.GhnService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/shipping")
@@ -44,6 +49,16 @@ public class ShippingController {
         return ApiResponse.<ShippingOrderDetailResponse>builder()
                 .status(HttpStatus.OK.value())
                 .message("Shipping order detail")
+                .data(result)
+                .build();
+    }
+
+    @PostMapping("/estimate-dimensions")
+    public ApiResponse<ProductPackageResponse> getEstimateDimensions(@RequestBody List<@Valid ProductPackage> productPackages) {
+        ProductPackageResponse result = ghnService.getProductPackage(productPackages);
+        return ApiResponse.<ProductPackageResponse>builder()
+                .status(HttpStatus.OK.value())
+                .message("Estimate dimensions")
                 .data(result)
                 .build();
     }

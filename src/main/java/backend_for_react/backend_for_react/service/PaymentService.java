@@ -139,7 +139,7 @@ public class PaymentService {
         return signValue.equals(vnp_SecureHash);
     }
 
-    public void vnpayCallback(HttpServletRequest request){
+    public boolean vnpayCallback(HttpServletRequest request){
         Map<String, String[]> params = request.getParameterMap();
         String vnp_ResponseCode = request.getParameter("vnp_ResponseCode");
         String vnp_TxnRef = request.getParameter("vnp_TxnRef");
@@ -167,8 +167,9 @@ public class PaymentService {
             orderService.completePayment(orderId);
             redisTemplate.delete(vnp_TxnRef);
             log.info("Thanh toán thành công cho đơn hàng {}", orderId);
+            return true;
         }else {
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "Payment failed - response code: {}", vnp_ResponseCode);
+            return false;
         }
     }
 

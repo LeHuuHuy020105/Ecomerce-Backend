@@ -15,8 +15,6 @@ import java.time.LocalDateTime;
 public class VoucherUpdateRequest {
     private Long id;
 
-    private String code;
-
     private String discription;
 
     private VoucherType type;

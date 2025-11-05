@@ -13,6 +13,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 public interface ProductRepository extends JpaRepository<Product,Long> {
@@ -49,4 +50,37 @@ public interface ProductRepository extends JpaRepository<Product,Long> {
     );
 
     Optional<Product> findByIdAndProductStatus(Long id, ProductStatus productStatus);
+
+    // 🔹 Dành cho khách (chưa đăng nhập)
+    @Query("""
+           SELECT p FROM Product p
+           ORDER BY p.soldQuantity DESC, p.avgRating DESC
+           """)
+    Page<Product> findRecommendedForGuest(Pageable pageable);
+
+    // Cac san pham cung loai va co so luong ban ra va danh gia cao cao - thap
+    @Query("""
+           SELECT p FROM Product p
+           WHERE p.category.name IN :categories
+           ORDER BY p.avgRating DESC, p.soldQuantity DESC
+           """)
+    Page<Product> findRecommendedForUser(List<String> categories, Pageable pageable);
+
+    // 🔹 Lấy danh sách tên category từ danh sách sản phẩm
+    @Query("SELECT DISTINCT p.category.name FROM Product p WHERE p.id IN :productIds")
+    List<String> findCategoryNamesByProductIds(Set<Long> productIds);
+
+    // Lay top 20 san pham ban chay va danh gia cao - thap
+    List<Product> findTop20ByOrderBySoldQuantityDescAvgRatingDesc();
+
+    // Lay 10 san pham ban ra va danh gia thap - cao
+    List<Product> findTop10ByOrderBySoldQuantityAscAvgRatingAsc();
+
+    // 🔹 Custom query (nếu có filter tương tự)
+    @Query("""
+           SELECT p FROM Product p
+           WHERE p.category.name IN :categories
+           ORDER BY p.avgRating DESC, p.soldQuantity DESC
+           """)
+    List<Product> findTop50ByCategoryNamesAndSimilarPrice(List<String> categories);
 }

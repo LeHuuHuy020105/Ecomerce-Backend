@@ -13,7 +13,6 @@ public class VoucherMapper {
     public static VoucherResponse toVoucherResponse(Voucher voucher) {
         VoucherResponse response = VoucherResponse.builder()
                 .id(voucher.getId())
-                .code(voucher.getCode())
                 .discription(voucher.getDiscription())
                 .type(voucher.getType())
                 .discountValue(voucher.getDiscountValue())

@@ -32,6 +32,12 @@ public class FavoriteService {
         User user = securityUtils.getCurrentUser();
         Product product = productRepository.findById(productId)
                 .orElseThrow(()-> new BusinessException(ErrorCode.BAD_REQUEST , MessageError.PRODUCT_NOT_FOUND));
+        boolean alreadyFavorited = user.getFavoriteProducts()
+                .stream()
+                .anyMatch(p -> p.getId().equals(productId));
+        if(alreadyFavorited){
+            throw new BusinessException(ErrorCode.BAD_REQUEST,"Product is already favorited");
+        }
         user.getFavoriteProducts().add(product);
         userRepository.save(user);
     }

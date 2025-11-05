@@ -34,6 +34,7 @@ public class ReturnOrder extends BaseEntity {
     private Integer totalWidth;  // cm
     private Integer totalHeight; // cm
     private Integer totalLength; // cm
+    private Integer serviceTyeId;
 
     // Trạng thái xử lý hoàn hàng
     @Enumerated(EnumType.STRING)

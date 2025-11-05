@@ -8,6 +8,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.util.List;
 
 @Data
@@ -30,10 +31,6 @@ public class OrderCreationRequest implements Serializable {
     private String deliveryProvinceName;
     @NotBlank(message = "Delivery address must be not blank")
     private String deliveryAddress;
-    @NotNull(message = "Delivery service id must be not null")
-    private Integer serviceDeliveryId;
-    @NotBlank(message = "Delivery service name must be not blank")
-    private String serviceDeliveryName;
     @NotNull(message = "Order items must be not null")
     private List<OrderItemCreationRequest>orderItems;
     @NotNull(message = "Payment type must be not null")

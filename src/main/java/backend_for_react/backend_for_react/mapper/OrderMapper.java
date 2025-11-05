@@ -26,8 +26,6 @@ public class OrderMapper {
                 .deliveryProvinceId(order.getDeliveryProvinceId())
                 .deliveryDistrictName(order.getDeliveryDistrictName())
                 .deliveryProvinceName(order.getDeliveryProvinceName())
-                .serviceDeliveryId(order.getServiceDeliveryId())
-                .serviceDeliveryName(order.getServiceDeliveryName())
                 .paymentType(order.getPaymentType())
                 .paymentStatus(order.getPaymentStatus())
                 .totalAmount(order.getTotalAmount())

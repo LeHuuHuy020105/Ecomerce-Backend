@@ -5,6 +5,7 @@ import backend_for_react.backend_for_react.controller.response.ApiResponse;
 import backend_for_react.backend_for_react.service.PaymentService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -12,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -38,11 +40,14 @@ public class PaymentController {
     }
 
     @GetMapping("/vnpay-return")
-    public ApiResponse<Object> returnPayment(HttpServletRequest request) throws UnsupportedEncodingException {
-        paymentService.vnpayCallback(request);
-        return ApiResponse.builder()
-                .status(HttpStatus.OK.value())
-                .message("Payment successfully ")
-                .build();
+    public void returnPayment(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        boolean success = paymentService.vnpayCallback(request); // sửa hàm này trả boolean
+        if (success) {
+            // Nếu thành công, redirect về FE
+            response.sendRedirect("http://localhost:3000/payment-success");
+        } else {
+            // Nếu thất bại, redirect về FE
+            response.sendRedirect("http://localhost:3000/payment-failed");
+        }
     }
 }

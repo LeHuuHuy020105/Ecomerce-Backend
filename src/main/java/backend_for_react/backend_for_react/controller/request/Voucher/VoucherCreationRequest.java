@@ -12,8 +12,6 @@ import java.time.LocalDateTime;
 
 @Data
 public class VoucherCreationRequest {
-    @NotNull(message ="Voucher code not blank")
-    private String code;
 
     @NotNull(message ="Discription voucher not blank")
     private String description;
@@ -40,6 +38,7 @@ public class VoucherCreationRequest {
     @Min(value = 1, message = "Each user must be allowed to use the voucher at least once")
     private Integer usageLimitPerUser = 1;
 
+    @NotNull(message = "User rank not null")
     private Long userRankId;
 
     @NotNull(message = "Shipping is not null")

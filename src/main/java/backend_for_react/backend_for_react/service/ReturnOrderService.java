@@ -5,6 +5,7 @@ import backend_for_react.backend_for_react.common.enums.ProductStatus;
 import backend_for_react.backend_for_react.common.enums.ReturnStatus;
 import backend_for_react.backend_for_react.common.enums.Status;
 import backend_for_react.backend_for_react.common.utils.SecurityUtils;
+import backend_for_react.backend_for_react.controller.request.ProductPackage.ProductPackage;
 import backend_for_react.backend_for_react.controller.request.ReturnOrder.ReturnOrderCreationRequest;
 import backend_for_react.backend_for_react.controller.request.Shipping.FeeRequest;
 import backend_for_react.backend_for_react.controller.request.Shipping.ShippingOrderRequest;
@@ -178,11 +179,25 @@ public class ReturnOrderService {
         List<OrderItem> relatedOrderItems = returnItems.stream()
                 .map(ReturnOrderItem::getOrderItem)
                 .toList();
-
-        returnOrder.setTotalWeight(calculateTotalWeight(relatedOrderItems));
-        returnOrder.setTotalHeight(calculateTotalHeight(relatedOrderItems));
-        returnOrder.setTotalWidth(calculateTotalWidth(relatedOrderItems));
-        returnOrder.setTotalLength(calculateTotalLength(relatedOrderItems));
+        List<ProductPackage> packages = relatedOrderItems.stream()
+                .map(item -> new ProductPackage(
+                        item.getNameProductSnapShot(),
+                        item.getProductVariant().getLength(),
+                        item.getProductVariant().getWidth(),
+                        item.getProductVariant().getHeight(),
+                        item.getProductVariant().getWeight(),
+                        item.getQuantity()
+                ))
+                .toList();
+        int height = calculateAverageHeight(packages);
+        int width = calculateAverageWidth(packages);
+        int length = calculateAverageLength(packages);
+        int weight = calculateTotalWeight(packages);
+        returnOrder.setTotalWeight(weight);
+        returnOrder.setTotalHeight(height);
+        returnOrder.setTotalWidth(width);
+        returnOrder.setTotalLength(length);
+        returnOrder.setServiceTyeId(determineServiceTypeId(weight,length,width,height));
         returnOrder.setRefundAmount(refundAmount);
 
         // Lưu ReturnOrder

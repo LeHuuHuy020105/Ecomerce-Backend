@@ -32,5 +32,9 @@ public class AddressResponse {
 
     private boolean isDefaultAddress;
 
+    private String customerName;
+    private String phoneNumber;
+
+
     private Status status;
 }

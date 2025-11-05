@@ -53,10 +53,7 @@ public class Order extends BaseEntity{
     private String deliveryAddress;
 
     @NotNull
-    private Integer serviceDeliveryId;
-
-    @NotNull
-    private String serviceDeliveryName;
+    private Integer serviceTypeId;
 
 
     private BigDecimal originalOrderAmount;

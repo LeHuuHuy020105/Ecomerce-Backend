@@ -49,6 +49,8 @@ public class SecurityConfig {
             "/fushionAuth/**",
             "/category/list",
             "/category/all",
+            "/api/shipping/estimate-dimensions",
+            "/api/shipping/fee",
             "/user/email",
             "/user/forgot-password",
             "/otp/**",

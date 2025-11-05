@@ -52,6 +52,8 @@ public class UserMapper {
                 .streetAddress(userHasAddress.getAddress().getAddress())
                 .district(userHasAddress.getAddress().getDistrict())
                 .ward(userHasAddress.getAddress().getWard())
+                .customerName(userHasAddress.getAddress().getCustomerName())
+                .phoneNumber(userHasAddress.getAddress().getPhoneNumber())
                 .province(userHasAddress.getAddress().getProvince())
                 .districtId(userHasAddress.getAddress().getDistrictId())
                 .wardId(userHasAddress.getAddress().getWardId())

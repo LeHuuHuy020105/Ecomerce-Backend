@@ -87,7 +87,8 @@ public class CartService {
                newCart.setStatus(Status.ACTIVE);
                newCart.setListPriceSnapShot(productVariant.getPrice());
                newCart.setUrlImageSnapShot(productVariant.getProduct().getUrlCoverImage());
-               newCart.setNameProductSnapShot(ProductVariantMapper.buildVariantName(productVariant));
+               newCart.setNameProductSnapShot(productVariant.getProduct().getName());
+               newCart.setVariantAttributesSnapshot(ProductVariantMapper.buildVariantName(productVariant));
                cartRepository.save(newCart);
            }else {
                Cart oldCart = cart.get();

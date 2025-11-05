@@ -5,6 +5,8 @@ import backend_for_react.backend_for_react.common.utils.SecurityUtils;
 import backend_for_react.backend_for_react.controller.FeeResponse;
 import backend_for_react.backend_for_react.controller.request.Order.OrderCreationRequest;
 import backend_for_react.backend_for_react.controller.request.Order.OrderItem.OrderItemCreationRequest;
+import backend_for_react.backend_for_react.controller.request.ProductPackage.ProductPackage;
+import backend_for_react.backend_for_react.controller.request.ProductPackage.ProductPackageResponse;
 import backend_for_react.backend_for_react.controller.request.Shipping.FeeRequest;
 import backend_for_react.backend_for_react.controller.request.Shipping.ShippingOrderItem;
 import backend_for_react.backend_for_react.controller.request.Shipping.ShippingOrderRequest;
@@ -16,6 +18,7 @@ import backend_for_react.backend_for_react.mapper.ProductVariantMapper;
 import backend_for_react.backend_for_react.mapper.UserMapper;
 import backend_for_react.backend_for_react.model.*;
 import backend_for_react.backend_for_react.repository.*;
+import backend_for_react.backend_for_react.service.FireBaseService;
 import backend_for_react.backend_for_react.service.GhnService;
 import backend_for_react.backend_for_react.service.VoucherService;
 import backend_for_react.backend_for_react.state.Order.OrderState;
@@ -61,7 +64,8 @@ public class OrderService {
     VoucherRepository voucherRepository;
     VoucherUsageRepository voucherUsageRepository;
     GhnService ghnService;
-    private final UserService userService;
+    FireBaseService fireBaseService;
+    UserService userService;
 
     public PageResponse<OrderResponse> findAllByUser(String keyword, String sort, int page, int size , boolean isAll, DeliveryStatus orderStatus ) {
         log.info("KEYWORD : ", keyword);
@@ -148,8 +152,6 @@ public class OrderService {
         newOrder.setDeliveryProvinceName(req.getDeliveryProvinceName());
         newOrder.setDeliveryDistrictName(req.getDeliveryDistrictName());
         newOrder.setDeliveryWardCode(req.getDeliveryWardCode());
-        newOrder.setServiceDeliveryId(req.getServiceDeliveryId());
-        newOrder.setServiceDeliveryName(req.getServiceDeliveryName());
         newOrder.setPaymentType(req.getPaymentType());
         newOrder.setOrderStatus(DeliveryStatus.PENDING);
         newOrder.setPaymentStatus(PaymentStatus.UNPAID);
@@ -204,11 +206,25 @@ public class OrderService {
         newOrder.setOrderItems(orderItems);
 
         // Cập nhật kích thước - trọng lượng
-        newOrder.setHeight(calculateTotalHeight(orderItems));
-        newOrder.setLength(calculateTotalLength(orderItems));
-        newOrder.setWeight(calculateTotalWeight(orderItems));
-        newOrder.setWidth(calculateTotalWidth(orderItems));
-
+        List<ProductPackage> packages = orderItems.stream()
+                .map(item -> new ProductPackage(
+                        item.getNameProductSnapShot(),
+                        item.getProductVariant().getLength(),
+                        item.getProductVariant().getWidth(),
+                        item.getProductVariant().getHeight(),
+                        item.getProductVariant().getWeight(),
+                        item.getQuantity()
+                ))
+                .toList();
+        int height = calculateAverageHeight(packages);
+        int width = calculateAverageWidth(packages);
+        int length = calculateAverageLength(packages);
+        int weight = calculateTotalWeight(packages);
+        newOrder.setHeight(height);
+        newOrder.setLength(length);
+        newOrder.setWeight(weight);
+        newOrder.setWidth(width);
+        newOrder.setServiceTypeId(determineServiceTypeId(weight, length, width, height));
         //Tinh phi ship
         FeeRequest feeRequest = ghnService.toFeeRequest(newOrder);
         BigDecimal feeShip = ghnService.calculateShippingFee(feeRequest).getTotal();
@@ -226,6 +242,7 @@ public class OrderService {
             voucherService.validateVoucherUsageUser(voucher, currentUser);
 
             if (voucher.getIsShipping() != null && voucher.getIsShipping()) {
+                log.info("abcsd");
                 discountValue = voucherService.calculateDiscountValue(feeShip, voucher);
             } else {
                 discountValue = voucherService.calculateDiscountValue(subTotal, voucher);
@@ -234,13 +251,6 @@ public class OrderService {
             voucherService.decreaseVoucherQuantity(voucher);
             newOrder.setVoucher(voucher);
             newOrder.setVoucherDiscountValue(discountValue);
-
-            if (currentUser != null) {
-                VoucherUsage usage = new VoucherUsage();
-                usage.setVoucher(voucher);
-                usage.setUser(currentUser);
-                voucherUsageRepository.save(usage);
-            }
         }
 
         // Phân bổ giảm giá cho từng sản phẩm
@@ -256,15 +266,26 @@ public class OrderService {
         }
 
         // Cập nhật tổng tiền đơn hàng
+        log.info("discountValue: " + discountValue);
         BigDecimal totalAfterDiscount = subTotal.subtract(discountValue);
         newOrder.setOriginalOrderAmount(subTotal);
         newOrder.setTotalAmount(totalAfterDiscount.add(feeShip));
 
         orderRepository.save(newOrder);
 
+        if(voucher != null){
+            if (currentUser != null) {
+                VoucherUsage usage = new VoucherUsage();
+                usage.setVoucher(voucher);
+                usage.setUser(currentUser);
+                usage.setOrder(newOrder);
+                voucherUsageRepository.save(usage);
+            }
+        }
+
+        fireBaseService.updateStatus(newOrder);
         return newOrder.getId();
     }
-
 
 
     @Transactional(rollbackFor = Exception.class)
@@ -282,8 +303,9 @@ public class OrderService {
 
         OrderState currentState = OrderStateFactory.getState(order.getOrderStatus());
         currentState.changeState(order, nextStatus);
-
         orderRepository.save(order);
+
+        fireBaseService.updateStatus(order);
     }
 
 
@@ -328,8 +350,12 @@ public class OrderService {
 
     @Transactional(rollbackFor = Exception.class)
     public void cancelOrder(Long orderId) {
+        User currentUser = securityUtils.getCurrentUser();
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_EXISTED, MessageError.ORDER_NOT_FOUND));
+        if(order.getUser() != currentUser) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, " This order not yours");
+        }
         if(order.getOrderStatus().equals(DeliveryStatus.PENDING)){
             for(OrderItem orderItem : order.getOrderItems()){
                 ProductVariant productVariant = orderItem.getProductVariant();
@@ -338,6 +364,10 @@ public class OrderService {
             }
             order.setOrderStatus(DeliveryStatus.CANCELLED);
             orderRepository.save(order);
+            VoucherUsage voucherUsage = voucherUsageRepository.findByOrder(order)
+                    .orElseThrow(()-> new BusinessException(ErrorCode.BAD_REQUEST,"Voucher usage not found this order"));
+            voucherUsageRepository.delete(voucherUsage);
+            fireBaseService.updateStatus(order);
         }else {
             throw new BusinessException(ErrorCode.BAD_REQUEST,"Can't cancel order");
         }
@@ -438,9 +468,6 @@ public class OrderService {
                 .deliveryProvinceName(order.getDeliveryProvinceName())
                 .deliveryWardCode(order.getDeliveryWardCode())
                 .deliveryAddress(order.getDeliveryAddress())
-                .serviceDeliveryId(order.getServiceDeliveryId())
-                .serviceDeliveryId(order.getServiceDeliveryId())
-                .serviceDeliveryName(order.getServiceDeliveryName())
                 .totalAmount(order.getTotalAmount())
                 .originalOrderAmount(order.getOriginalOrderAmount())
                 .deliveryStatus(order.getOrderStatus())

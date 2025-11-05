@@ -19,7 +19,6 @@ import java.util.List;
 public class VoucherResponse {
     private Long id;
 
-    private String code;
 
     private String discription;
 
