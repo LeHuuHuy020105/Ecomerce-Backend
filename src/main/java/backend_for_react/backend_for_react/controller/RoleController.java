@@ -4,6 +4,7 @@ import backend_for_react.backend_for_react.controller.request.Role.RoleCreationR
 import backend_for_react.backend_for_react.controller.response.ApiResponse;
 import backend_for_react.backend_for_react.controller.response.RoleResponse;
 import backend_for_react.backend_for_react.service.RoleService;
+import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/role")
@@ -39,7 +41,7 @@ public class RoleController {
     }
 
     @PostMapping("/add")
-    public ApiResponse<Long> createRole(@RequestBody RoleCreationRequest req){
+    public ApiResponse<Long> createRole(@RequestBody @Valid RoleCreationRequest req){
         Long roleId = roleService.save(req);
         return ApiResponse.<Long>builder()
                 .status(HttpStatus.OK.value())
@@ -48,6 +50,23 @@ public class RoleController {
                 .build();
     }
 
+    @PutMapping("/update/{roleId}")
+    public ApiResponse<Void> updateRole(@RequestBody RoleCreationRequest request, @PathVariable Long roleId){
+        roleService.update(request,roleId);
+        return ApiResponse.<Void>builder()
+                .status(HttpStatus.OK.value())
+                .message("Update role")
+                .build();
+    }
+
+    @PostMapping("/add_permission/{roleId}")
+    public ApiResponse<Void> addPermissionRole(@RequestParam Set<Long> permissionIds, @PathVariable Long roleId){
+        roleService.addPermissionRole(permissionIds,roleId);
+        return ApiResponse.<Void>builder()
+                .status(HttpStatus.OK.value())
+                .message("Add permission role")
+                .build();
+    }
     @DeleteMapping("/{roleId}")
     public void delete(@PathVariable Long roleId){
         roleService.delete(roleId);

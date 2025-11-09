@@ -45,8 +45,10 @@ public class SecurityConfig {
             "/orders/add",
             "/sendgrid/otp",
             "/product/list",
+            "/products/category/*",
             "/product/detail/**",
             "/fushionAuth/**",
+            "/user/calculator_point",
             "/category/list",
             "/category/all",
             "/api/shipping/estimate-dimensions",
@@ -56,6 +58,9 @@ public class SecurityConfig {
             "/otp/**",
             "/user/listAllByEmail",
             "/payment/vnpay-return",
+            "/product/list/detail",
+            "/review/product/list/**",
+            "/review/productVariant/**"
     };
     private final String[] SWAGGER_ENDPOINTS = {
             "/v3/**",

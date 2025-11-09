@@ -16,7 +16,7 @@ import java.util.List;
 public class ReviewResponse implements Serializable {
     private Long id;
     private Long productId;
-    private Long userId;
+    private UserResponse userResponse;
     private String avatarUser;
     private String fullName;      // lấy từ User
     private Integer rating;

@@ -90,7 +90,7 @@ public class SupplierService {
     }
 
     @Transactional
-    @PreAuthorize("hasRole('ADMIN') or hasAuthority('ADD_SUPPLIER')")
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('RESTORE_SUPPLIER')")
     public void restoreSupplier(Long id){
         Supplier supplier = supplierRepository.findById(id)
                 .orElseThrow(()-> new BusinessException(ErrorCode.BAD_REQUEST,"Supplier not found"));

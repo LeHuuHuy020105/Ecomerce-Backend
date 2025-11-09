@@ -1,6 +1,7 @@
 package backend_for_react.backend_for_react.controller.response;
 
 import backend_for_react.backend_for_react.common.enums.Gender;
+import backend_for_react.backend_for_react.common.enums.UserStatus;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
@@ -24,6 +25,9 @@ public class UserResponse implements Serializable {
     String email;
     String phone;
     String avatar;
+    UserStatus status;
+    Integer point;
+    Boolean verifiedEmail;
     List<AddressResponse> addressResponses;
     BigDecimal totalSpent;
     UserRankResponse userRankResponse;

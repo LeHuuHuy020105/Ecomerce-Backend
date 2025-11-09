@@ -5,6 +5,7 @@ import backend_for_react.backend_for_react.common.enums.Rank;
 import backend_for_react.backend_for_react.common.enums.Status;
 import backend_for_react.backend_for_react.common.enums.UserStatus;
 import backend_for_react.backend_for_react.common.utils.SecurityUtils;
+import backend_for_react.backend_for_react.config.AppConfig;
 import backend_for_react.backend_for_react.controller.request.User.*;
 import backend_for_react.backend_for_react.controller.response.AddressResponse;
 import backend_for_react.backend_for_react.controller.response.PageResponse;
@@ -53,6 +54,7 @@ public class UserService {
     SecurityUtils securityUtils;
     OTPService otpService;
     UserRankRepository userRankRepository;
+    AppConfig appConfig;
 
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('VIEW_ALL_USER')")
     // doi voi permission , phan quyen theo permission (nhieu role co nhieu permission nay)
@@ -254,6 +256,9 @@ public class UserService {
         return UserMapper.getUserResponse(user);
     }
 
+    public BigDecimal calculatorPoint(Integer point){
+        return appConfig.getPointValue().multiply(new BigDecimal(point));
+    }
 
     @Transactional(rollbackFor = Exception.class)
     public void addAddress(UserCreationAddressRequest req) {

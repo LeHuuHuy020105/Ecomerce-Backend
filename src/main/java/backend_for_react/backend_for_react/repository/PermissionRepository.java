@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 @Repository
@@ -16,4 +17,6 @@ public interface PermissionRepository extends JpaRepository<Permission, Long> {
     List<Permission> findAllByStatusActive(@Param("ids") Set<Long> ids, @Param("status") Status status);
 
     boolean existsByName(String name);
+
+    List<Permission> findAllByStatus(Status status);
 }

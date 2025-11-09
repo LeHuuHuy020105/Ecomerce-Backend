@@ -21,7 +21,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.regex.Matcher;
@@ -34,6 +36,7 @@ import java.util.regex.Pattern;
 public class UserRankService {
     UserRankRepository userRankRepository;
 
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('VIEW_ALL_USER_RANK')")
     public PageResponse<UserRankResponse> findAll(String keyword, String sort, int page, int size){
         log.info("Find all vouchers ");
 
@@ -65,6 +68,9 @@ public class UserRankService {
         PageResponse response = getUserRankPageResponse(pageNo, size, userRanks);
         return response;
     }
+
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('ADD_USER_RANK')")
+    @Transactional
     public void add(UserRankCreationRequest request){
         int maxLevel = userRankRepository.findMaxLevel();
         UserRank userRank = new UserRank();
@@ -75,6 +81,8 @@ public class UserRankService {
         userRankRepository.save(userRank);
     }
 
+    @Transactional
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('UPDATE_USER_RANK')")
     public void update(UserRankUpdateRequest request){
         UserRank userRank = userRankRepository.findById(request.getId())
                 .orElseThrow(()-> new BusinessException(ErrorCode.BAD_REQUEST, "User rank not found"));
@@ -83,6 +91,8 @@ public class UserRankService {
         userRankRepository.save(userRank);
     }
 
+    @Transactional
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('DELETE_USER_RANK')")
     public void delete(Long id){
         UserRank userRank = userRankRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.BAD_REQUEST, "User rank not found"));

@@ -2,6 +2,7 @@ package backend_for_react.backend_for_react.service.impl;
 
 import backend_for_react.backend_for_react.common.enums.*;
 import backend_for_react.backend_for_react.common.utils.SecurityUtils;
+import backend_for_react.backend_for_react.config.AppConfig;
 import backend_for_react.backend_for_react.controller.FeeResponse;
 import backend_for_react.backend_for_react.controller.request.Order.OrderCreationRequest;
 import backend_for_react.backend_for_react.controller.request.Order.OrderItem.OrderItemCreationRequest;
@@ -27,6 +28,7 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -37,6 +39,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -46,6 +49,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static backend_for_react.backend_for_react.common.utils.ShippingHelper.*;
+import static backend_for_react.backend_for_react.mapper.OrderMapper.getOrderItemResponse;
 import static backend_for_react.backend_for_react.mapper.OrderMapper.getOrderResponse;
 
 
@@ -66,6 +70,8 @@ public class OrderService {
     GhnService ghnService;
     FireBaseService fireBaseService;
     UserService userService;
+    AppConfig appConfig;
+    private final UserRepository userRepository;
 
     public PageResponse<OrderResponse> findAllByUser(String keyword, String sort, int page, int size , boolean isAll, DeliveryStatus orderStatus ) {
         log.info("KEYWORD : ", keyword);
@@ -102,7 +108,7 @@ public class OrderService {
         return response;
     }
 
-    @PreAuthorize("hasRole('ADMIN') or hasAuthority('VIEW_ALL_PRODUCT')")
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('VIEW_ALL_ORDER')")
     public PageResponse<OrderResponse> findAllByAdmin( String keyword,
                                                        boolean isAll,
                                                        DeliveryStatus orderStatus,
@@ -156,6 +162,7 @@ public class OrderService {
         newOrder.setOrderStatus(DeliveryStatus.PENDING);
         newOrder.setPaymentStatus(PaymentStatus.UNPAID);
         newOrder.setAfterSaleStatus(OrderAfterSaleStatus.NONE);
+        newOrder.setNote(req.getNote());
 
         if (currentUser != null) {
             newOrder.setUser(currentUser);
@@ -193,6 +200,7 @@ public class OrderService {
             orderItem.setNameProductSnapShot(productVariant.getProduct().getName());
             orderItem.setVariantAttributesSnapshot(ProductVariantMapper.buildVariantName(productVariant));
             orderItem.setProductVariant(productVariant);
+            orderItem.setUrlImageSnapShot(productVariant.getProduct().getUrlCoverImage());
             orderItem.setQuantity(totalQuantity);
 
             BigDecimal itemTotal = productVariant.getPrice().multiply(BigDecimal.valueOf(totalQuantity));
@@ -264,7 +272,7 @@ public class OrderService {
                 item.setFinalPrice(finalUnitPrice);
             }
         }
-
+        discountValue = discountValue.add(appConfig.getPointValue().multiply(BigDecimal.valueOf(req.getPoint())));
         // Cập nhật tổng tiền đơn hàng
         log.info("discountValue: " + discountValue);
         BigDecimal totalAfterDiscount = subTotal.subtract(discountValue);
@@ -272,6 +280,9 @@ public class OrderService {
         newOrder.setTotalAmount(totalAfterDiscount.add(feeShip));
 
         orderRepository.save(newOrder);
+
+        currentUser.setPoint(currentUser.getPoint()- req.getPoint());
+        userRepository.save(currentUser);
 
         if(voucher != null){
             if (currentUser != null) {
@@ -286,6 +297,120 @@ public class OrderService {
         fireBaseService.updateStatus(newOrder);
         return newOrder.getId();
     }
+
+
+    public OrderPricePreviewResponse previewOrderPrice(OrderCreationRequest req) {
+        BigDecimal subTotal = BigDecimal.ZERO;
+        List<OrderItemPreview> itemPreviews = new ArrayList<>();
+
+        // 1. Gộp variant giống nhau
+        Map<Long, Integer> mergedVariants = new HashMap<>();
+        for (OrderItemCreationRequest itemReq : req.getOrderItems()) {
+            mergedVariants.merge(itemReq.getProductVariantId(), itemReq.getQuantity(), Integer::sum);
+        }
+
+        // 2. Lấy thông tin từng sản phẩm và tính subtotal
+        List<OrderItem> tempOrderItems = new ArrayList<>();
+        for (Map.Entry<Long, Integer> entry : mergedVariants.entrySet()) {
+            Long variantId = entry.getKey();
+            Integer quantity = entry.getValue();
+            ProductVariant variant = productVariantRepository.findByIdAndStatus(variantId, Status.ACTIVE)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.NOT_EXISTED, "Variant not found"));
+
+            BigDecimal itemTotal = variant.getPrice().multiply(BigDecimal.valueOf(quantity));
+            subTotal = subTotal.add(itemTotal);
+
+            // Tạo item preview
+            OrderItemPreview itemPreview = OrderItemPreview.builder()
+                    .productVariantId(variantId)
+                    .productName(variant.getProduct().getName())
+                    .unitPrice(variant.getPrice())
+                    .quantity(quantity)
+                    .finalPrice(variant.getPrice()) // sẽ update sau nếu có voucher/point
+                    .build();
+            itemPreviews.add(itemPreview);
+
+            // Tạo OrderItem tạm để tính phí ship
+            OrderItem tempItem = new OrderItem();
+            tempItem.setProductVariant(variant);
+            tempItem.setQuantity(quantity);
+            tempItem.setNameProductSnapShot(variant.getProduct().getName());
+            tempOrderItems.add(tempItem);
+        }
+
+        // 3. Tạo Order tạm để tính phí ship
+        Order tempOrder = new Order();
+        tempOrder.setOrderItems(tempOrderItems);
+
+        // Tính tổng chiều cao, dài, rộng, cân nặng
+        List<ProductPackage> packages = tempOrderItems.stream()
+                .map(item -> new ProductPackage(
+                        item.getNameProductSnapShot(),
+                        item.getProductVariant().getLength(),
+                        item.getProductVariant().getWidth(),
+                        item.getProductVariant().getHeight(),
+                        item.getProductVariant().getWeight(),
+                        item.getQuantity()
+                )).toList();
+
+        tempOrder.setHeight(calculateAverageHeight(packages));
+        tempOrder.setWidth(calculateAverageWidth(packages));
+        tempOrder.setLength(calculateAverageLength(packages));
+        tempOrder.setWeight(calculateTotalWeight(packages));
+        tempOrder.setServiceTypeId(determineServiceTypeId(
+                tempOrder.getWeight(), tempOrder.getLength(),
+                tempOrder.getWidth(), tempOrder.getHeight()
+        ));
+
+        // 4. Tính phí ship chính xác
+        FeeRequest feeRequest = ghnService.toFeeRequest(tempOrder);
+        BigDecimal feeShip = ghnService.calculateShippingFee(feeRequest).getTotal();
+
+        // 5. Áp dụng voucher (nếu có)
+        BigDecimal discountValue = BigDecimal.ZERO;
+        Voucher voucher = null;
+        if (req.getVoucherId() != null) {
+            voucher = voucherRepository.findByIdAndStatus(req.getVoucherId(), VoucherStatus.ACTIVE)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.BAD_REQUEST, "Voucher not found"));
+
+            if (Boolean.TRUE.equals(voucher.getIsShipping())) {
+                discountValue = voucherService.calculateDiscountValue(feeShip, voucher);
+            } else {
+                discountValue = voucherService.calculateDiscountValue(subTotal, voucher);
+            }
+        }
+
+        // 6. Phân bổ giảm giá cho từng sản phẩm (nếu voucher không phải ship)
+        if (discountValue.compareTo(BigDecimal.ZERO) > 0 && (voucher == null || !Boolean.TRUE.equals(voucher.getIsShipping()))) {
+            for (OrderItemPreview item : itemPreviews) {
+                BigDecimal itemTotal = item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
+                BigDecimal ratio = itemTotal.divide(subTotal, 6, RoundingMode.HALF_UP);
+                BigDecimal itemDiscount = discountValue.multiply(ratio);
+                BigDecimal finalUnitPrice = item.getUnitPrice()
+                        .subtract(itemDiscount.divide(BigDecimal.valueOf(item.getQuantity()), 2, RoundingMode.HALF_UP));
+                item.setFinalPrice(finalUnitPrice);
+            }
+        }
+
+        // 7. Trừ điểm nếu có
+        BigDecimal pointDiscount = appConfig.getPointValue().multiply(BigDecimal.valueOf(req.getPoint()));
+        discountValue = discountValue.add(pointDiscount);
+
+        // 8. Tổng sau giảm giá + phí ship
+        BigDecimal totalAfterDiscount = subTotal.subtract(discountValue);
+        BigDecimal finalTotal = totalAfterDiscount.add(feeShip);
+
+        // 9. Build response
+        return OrderPricePreviewResponse.builder()
+                .items(itemPreviews)
+                .subTotal(subTotal)
+                .discount(discountValue)
+                .shippingFee(feeShip)
+                .finalTotal(finalTotal)
+                .build();
+    }
+
+
 
 
     @Transactional(rollbackFor = Exception.class)
@@ -335,6 +460,8 @@ public class OrderService {
         }
         order.setCompletedAt(LocalDateTime.now());
         updateSoldQuantity(order.getOrderItems());
+
+        fireBaseService.updateStatus(order);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -386,6 +513,7 @@ public class OrderService {
         order.setPaymentStatus(PaymentStatus.PAID);
         order.setPaymentAt(LocalDateTime.now());
         orderRepository.save(order);
+        fireBaseService.updateStatus(order);
     }
     public OrderResponse getOrderById(Long orderId) {
         User user = securityUtils.getCurrentUser();
@@ -442,40 +570,7 @@ public class OrderService {
         }
     }
 
-    private OrderItemResponse getOrderItemResponse(OrderItem orderItem) {
-        return OrderItemResponse.builder()
-                .orderItemId(orderItem.getId())
-                .quantity(orderItem.getQuantity())
-                .returnQuantity(orderItem.getReturnedQuantity())
-                .productVariantResponse(ProductVariantMapper.getProductVariantResponse(orderItem.getProductVariant()))
-                .build();
-    }
 
-    private OrderResponse getOrderResponse(Order order) {
-        List<OrderItemResponse> orderItemResponses = order.getOrderItems().stream()
-                .map(orderItem -> getOrderItemResponse(orderItem))
-                .toList();
-        return OrderResponse.builder()
-                .id(order.getId())
-                .orderTrackingCode(order.getOrderTrackingCode())
-                .userResponse(UserMapper.getPublicUserResponse(order.getUser()))
-                .customerName(order.getCustomerName())
-                .customerPhone(order.getCustomerPhone())
-                .deliveryWardName(order.getDeliveryWardName())
-                .deliveryDistrictId(order.getDeliveryDistrictId())
-                .deliveryProvinceId(order.getDeliveryProvinceId())
-                .deliveryDistrictName(order.getDeliveryDistrictName())
-                .deliveryProvinceName(order.getDeliveryProvinceName())
-                .deliveryWardCode(order.getDeliveryWardCode())
-                .deliveryAddress(order.getDeliveryAddress())
-                .totalAmount(order.getTotalAmount())
-                .originalOrderAmount(order.getOriginalOrderAmount())
-                .deliveryStatus(order.getOrderStatus())
-                .paymentStatus(order.getPaymentStatus())
-                .orderItemResponses(orderItemResponses)
-                .paymentType(order.getPaymentType())
-                .build();
-    }
 
     private PageResponse<OrderResponse> getOrderPageResponse(int page, int size, Page<Order> orders) {
         List<OrderResponse> orderResponseList = orders.stream()

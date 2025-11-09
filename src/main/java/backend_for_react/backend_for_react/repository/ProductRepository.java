@@ -25,6 +25,31 @@ public interface ProductRepository extends JpaRepository<Product,Long> {
 
     Page<Product> findAllByProductStatus(ProductStatus status, Pageable pageable);
 
+
+    @Query("""
+    SELECT p FROM User u
+    JOIN u.favoriteProducts p
+    WHERE u.id = :userId
+    AND p.productStatus = backend_for_react.backend_for_react.common.enums.ProductStatus.ACTIVE
+    AND (:keyword IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')))
+""")
+    Page<Product> findFavoriteProductsByUserIdAndKeyword(
+            @Param("userId") Long userId,
+            @Param("keyword") String keyword,
+            Pageable pageable
+    );
+
+
+    @Query("""
+    SELECT p FROM User u
+    JOIN u.favoriteProducts p
+    WHERE u.id = :userId
+    AND p.productStatus = backend_for_react.backend_for_react.common.enums.ProductStatus.ACTIVE
+""")
+    Page<Product> findFavoriteProductsByUserId(@Param("userId") Long userId, Pageable pageable);
+
+
+
     @Query("""
         SELECT p FROM Product p 
         WHERE p.productStatus = :status 

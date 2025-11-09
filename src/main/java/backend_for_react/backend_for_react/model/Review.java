@@ -33,8 +33,12 @@ public class Review extends BaseEntity{
     @Column(columnDefinition = "TEXT")
     private String comment;
 
-    @OneToMany(mappedBy = "review", fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @OneToMany(mappedBy = "review",
+            fetch = FetchType.LAZY,
+            cascade = CascadeType.ALL,
+            orphanRemoval = true)
     private List<ImageReview> images;
+
 
     @ManyToOne
     @JoinColumn(name = "product_id")

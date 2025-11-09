@@ -24,6 +24,7 @@
       otp-valid-minutes: 5
       resend-cooldown-minutes: 2
 
+
     fusionauth:
       api-key: ${fusionauth_api-key}
       baseUrl: http://localhost:9011
@@ -33,7 +34,7 @@
       secretKey: ${vnpay_secretkey}
       vnpay_url: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
       vnpay_api_url: https://sandbox.vnpayment.vn/merchant_webapi/api/transaction
-      return_url: http://localhost:8080/payment/vnpay-return
+      return_url: ${portFe}/payment/vnpay-return
       vnp_Version: 2.1.0
       vnp_Command: pay
 
@@ -89,7 +90,7 @@
       title: Backend service
       version: 1.0.0
 
-  frontEnd: http://localhost:5173
+  frontEnd: ${portFe}
   cloudinary:
     cloud-name: dca5zhgbs
     api-key: ${cloudinary_api-key}
@@ -111,3 +112,7 @@
   redis:
     host: localhost
     port: 6379
+
+  app:
+    point:
+      value: 500

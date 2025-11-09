@@ -35,5 +35,9 @@ public class OrderCreationRequest implements Serializable {
     private List<OrderItemCreationRequest>orderItems;
     @NotNull(message = "Payment type must be not null")
     private PaymentType paymentType;
+
+    private Integer point = 0;
+
+    private String note;
     private Long voucherId;
 }

@@ -5,6 +5,7 @@ import lombok.experimental.FieldDefaults;
 
 import java.time.LocalDateTime;
 import java.util.Date;
+import java.util.Set;
 
 @Data
 @Builder
@@ -14,5 +15,6 @@ import java.util.Date;
 public class AuthenticationResponse {
     String token;
     boolean authenticated;
+    Set<String> role;
     Date expiredAt;
 }

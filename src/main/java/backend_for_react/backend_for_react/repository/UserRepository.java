@@ -27,4 +27,5 @@ public interface UserRepository extends JpaRepository<User,Long> {
 
     Optional<User>findByIdAndStatus(Long id , UserStatus status);
 
+
 }

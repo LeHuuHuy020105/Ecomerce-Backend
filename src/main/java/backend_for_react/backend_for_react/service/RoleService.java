@@ -96,6 +96,27 @@ public class RoleService {
     }
 
     @Transactional
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('UPDATE_ROLE')")
+    public void update(RoleCreationRequest req , Long roleId){
+        log.info("Save role");
+        Role role = roleRepository.findById(roleId).orElseThrow(()-> new BusinessException(ErrorCode.BAD_REQUEST,MessageError.ROLE_NOT_FOUND));
+        if(req.getName() == null || req.getName().isEmpty()){
+            role.setName(req.getName());
+        }
+        roleRepository.save(role);
+    }
+
+    @Transactional
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('ADD_PERMISSION_ROLE')")
+    public void addPermissionRole(Set<Long> permissionId , Long roleId){
+        log.info("Save role");
+        Role role = roleRepository.findById(roleId).orElseThrow(()-> new BusinessException(ErrorCode.BAD_REQUEST,MessageError.ROLE_NOT_FOUND));
+        List<Permission> permissions = permissionRepository.findAllByStatusActive(permissionId, Status.ACTIVE);
+        role.setPermissions(new HashSet<>(permissions));
+        roleRepository.save(role);
+    }
+
+    @Transactional
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('DELETE_ROLE')")
     public void delete(Long id){
         Role role = roleRepository.findByIdAndStatus(id,Status.ACTIVE).orElseThrow(()-> new BusinessException(ErrorCode.NOT_EXISTED, MessageError.ROLE_NOT_FOUND));

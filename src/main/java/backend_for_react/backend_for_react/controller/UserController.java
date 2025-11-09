@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -63,7 +64,17 @@ public class UserController {
     public ApiResponse<UserResponse> getMyInfo() {
         UserResponse result = userService.getMyInfo();
         return ApiResponse.<UserResponse>builder()
+                .status(HttpStatus.OK.value())
                 .data(result)
+                .build();
+    }
+
+    @PostMapping("/calculator_point")
+    public ApiResponse<BigDecimal> calculotorPoint(@RequestParam Integer point) {
+        return ApiResponse.<BigDecimal>builder()
+                .status(HttpStatus.OK.value())
+                .message("Calculator point")
+                .data(userService.calculatorPoint(point))
                 .build();
     }
 

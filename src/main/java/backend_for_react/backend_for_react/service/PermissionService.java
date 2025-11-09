@@ -13,7 +13,9 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
+import jakarta.transaction.Transactional;
 
 import java.util.List;
 
@@ -25,9 +27,12 @@ public class PermissionService {
     PermissionRepository permissionRepository;
 
     public List<PermissionResponse> findAll(){
-        List<Permission> permissions = permissionRepository.findAll();
+        List<Permission> permissions = permissionRepository.findAllByStatus(Status.ACTIVE);
         return permissions.stream().map(PermissionMapper::getPermissionResponse).toList();
     }
+
+    @Transactional
+    @PreAuthorize("hasRole('ADMIN')")
     public Long save (PermissionCreationRequest req){
         Permission permission = new Permission();
         permission.setDescription(req.getDescription());
@@ -36,6 +41,7 @@ public class PermissionService {
         return permission.getId();
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     public void delete(Long id){
         Permission permission = permissionRepository.findById(id)
                 .orElseThrow(()->new BusinessException(ErrorCode.NOT_EXISTED, MessageError.PERMISSION_NOT_FOUND));

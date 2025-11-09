@@ -1,6 +1,8 @@
 package backend_for_react.backend_for_react.service;
 
+import backend_for_react.backend_for_react.common.enums.ProductStatus;
 import backend_for_react.backend_for_react.common.utils.SecurityUtils;
+import backend_for_react.backend_for_react.controller.response.PageResponse;
 import backend_for_react.backend_for_react.controller.response.ProductBaseResponse;
 import backend_for_react.backend_for_react.exception.BusinessException;
 import backend_for_react.backend_for_react.exception.ErrorCode;
@@ -14,10 +16,16 @@ import backend_for_react.backend_for_react.service.impl.ProductService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
@@ -27,7 +35,36 @@ public class FavoriteService {
     ProductRepository productRepository;
     SecurityUtils securityUtils;
 
-
+    public PageResponse<ProductBaseResponse> findAll(String keyword, String sort, int page, int size) {
+        User user = securityUtils.getCurrentUser();
+        Sort order = Sort.by(Sort.Direction.ASC, "id");
+        if (sort != null && !sort.isEmpty()) {
+            Pattern pattern = Pattern.compile("(\\w+?)(:)(.*)");
+            Matcher matcher = pattern.matcher(sort);
+            if (matcher.find()) {
+                String columnName = matcher.group(1);
+                if (matcher.group(3).equalsIgnoreCase("asc")) {
+                    order = Sort.by(Sort.Direction.ASC, columnName);
+                } else {
+                    order = Sort.by(Sort.Direction.DESC, columnName);
+                }
+            }
+        }
+        int pageNo = 0;
+        if (page > 0) {
+            pageNo = page - 1;
+        }
+        Pageable pageable = PageRequest.of(pageNo, size, order);
+        Page<Product> products = null;
+        if (keyword == null || keyword.isEmpty()) {
+            products = productRepository.findFavoriteProductsByUserId(user.getId(),pageable);
+        } else {
+            keyword = "%" + keyword.toLowerCase() + "%";
+            products = productRepository.findFavoriteProductsByUserIdAndKeyword(user.getId(),keyword, pageable);
+        }
+        PageResponse response = getProductPageResponse(pageNo, size, products);
+        return response;
+    }
     public void addFavorite(Long productId) {
         User user = securityUtils.getCurrentUser();
         Product product = productRepository.findById(productId)
@@ -50,8 +87,17 @@ public class FavoriteService {
         userRepository.save(user);
     }
 
-    public List<ProductBaseResponse> getFavorites() {
-        User user = securityUtils.getCurrentUser();
-        return user.getFavoriteProducts().stream().map(product -> ProductMapper.toBaseResponse(product)).toList();
+    private PageResponse<ProductBaseResponse> getProductPageResponse(int page, int size, Page<Product> products) {
+        List<ProductBaseResponse> productList = products.stream()
+                .map(ProductMapper::toBaseResponse)
+                .toList();
+        PageResponse<ProductBaseResponse> response = new PageResponse<>();
+        response.setPageNumber(page + 1);
+        response.setPageSize(size);
+        response.setTotalElements(products.getTotalElements());
+        response.setTotalPages(products.getTotalPages());
+        response.setData(productList);
+        return response;
     }
+
 }

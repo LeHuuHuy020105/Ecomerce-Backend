@@ -10,6 +10,8 @@ import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
+
 @RestController
 @RequestMapping("/image_product")
 @RequiredArgsConstructor
@@ -22,7 +24,7 @@ public class ImageProductController {
         imageProductService.addImageProduct(request);
     }
     @DeleteMapping("/delete")
-    public void deleteImageProduct(@RequestBody ImageProductDeleteRequest request) {
+    public void deleteImageProduct(@RequestBody ImageProductDeleteRequest request) throws IOException {
         imageProductService.deleteImageProduct(request);
     }
 }

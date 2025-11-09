@@ -10,6 +10,7 @@ services:
       - MYSQL_ROOT_PASSWORD=password
       - MYSQL_USER=admin
       - MYSQL_PASSWORD=Admin@123456
+      - MYSQL_ROOT_HOST=0.0.0.0
     ports:
       - '3307:3306'
     volumes:
@@ -34,13 +35,13 @@ services:
 #      - "8080:8080"
 #    networks:
 #      - default
-  web:
-    image: "e-ecommerce:0.0.1"
-    ports:
-      - "8080:8080"
-    container_name: e-ecommerce
-    env_file:
-      - ./.env.example
+#  web:
+#    image: "e-ecommerce:0.0.1"
+#    ports:
+#      - "8080:8080"
+#    container_name: e-ecommerce
+#    env_file:
+#      - ./.env.example
 
 
 networks:

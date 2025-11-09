@@ -3,6 +3,7 @@ package backend_for_react.backend_for_react.service;
 
 import backend_for_react.backend_for_react.common.enums.ProductStatus;
 import backend_for_react.backend_for_react.common.enums.Status;
+import backend_for_react.backend_for_react.common.utils.CloudinaryHelper;
 import backend_for_react.backend_for_react.controller.request.ImageProduct.ImageProductCreationRequest;
 import backend_for_react.backend_for_react.controller.request.ImageProduct.ImageProductDeleteRequest;
 import backend_for_react.backend_for_react.exception.BusinessException;
@@ -18,6 +19,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -27,6 +29,7 @@ import java.util.stream.Collectors;
 public class ImageProductService {
     private final ImageProductRepository imageProductRepository;
     private final ProductRepository productRepository;
+    private final CloudinaryHelper cloudinaryHelper;
 
     @Transactional(rollbackFor = Exception.class)
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('ADD_IMAGE_PRODUCT')")
@@ -48,10 +51,11 @@ public class ImageProductService {
 
     @Transactional(rollbackFor = Exception.class)
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('DELETE_IMAGE_PRODUCT')")
-    public void deleteImageProduct(ImageProductDeleteRequest request) {
+    public void deleteImageProduct(ImageProductDeleteRequest request) throws IOException {
         log.info("deleteImageProduct");
         Product product = productRepository.findByIdAndProductStatus(request.getProductId(), ProductStatus.ACTIVE)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_EXISTED, MessageError.PRODUCT_NOT_FOUND));
         imageProductRepository.deleteAllByProductIdAndUrls(product, request.getUrlImages());
+        cloudinaryHelper.deleteByUrl(request.getUrlImages());
     }
 }

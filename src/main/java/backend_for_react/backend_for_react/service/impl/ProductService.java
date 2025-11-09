@@ -16,6 +16,7 @@ import backend_for_react.backend_for_react.controller.response.*;
 import backend_for_react.backend_for_react.exception.BusinessException;
 import backend_for_react.backend_for_react.exception.ErrorCode;
 import backend_for_react.backend_for_react.exception.MessageError;
+import backend_for_react.backend_for_react.mapper.ProductMapper;
 import backend_for_react.backend_for_react.mapper.ProductVariantMapper;
 import backend_for_react.backend_for_react.model.*;
 import backend_for_react.backend_for_react.repository.*;
@@ -49,6 +50,7 @@ public class ProductService {
     private final AttributeValueRepository attributeValueRepository;
     private final VariantAttributeValueRepository variantAttributeValueRepository;
     private final SecurityUtils securityUtils;
+    private final CloudinaryHelper cloudinaryHelper;
     private final UserBehaviorRepository userBehaviorRepository;
 
 
@@ -124,6 +126,12 @@ public class ProductService {
         }
         PageResponse response = getProductPageResponse(pageNo, size, products);
         return response;
+    }
+
+
+    public List<ProductResponse> getDetailAllProduct() {
+        List<Product> products = productRepository.findAll();
+        return products.stream().map(product -> getProductDetailResponse(product)).toList();
     }
 
     /**
@@ -263,7 +271,7 @@ public class ProductService {
 
 
     @Transactional(rollbackFor = Exception.class)
-    @PreAuthorize("hasRole('ADMIN') or hasAuthority('ADD_PRODUCT')")
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('CREATE_PRODUCT')")
     public void save(ProductCreationRequest req) throws IOException {
         log.info("REQUEST : ", req);
         List<String> uploadedUrls = new ArrayList<>();
@@ -289,7 +297,7 @@ public class ProductService {
 
     @Transactional(rollbackFor = Exception.class)
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('UPDATE_PRODUCT')")
-    public void update(ProductUpdateRequest req) {
+    public void update(ProductUpdateRequest req) throws IOException {
         Product product = productRepository.findByIdAndProductStatus(req.getId(), ProductStatus.ACTIVE).orElseThrow(() -> new EntityNotFoundException("Product not found"));
         if (req.getCategoryId() != null) {
             Category category = categoryRepository.findByIdAndStatus(req.getCategoryId(), Status.ACTIVE).orElseThrow(() -> new EntityNotFoundException("Category not found"));
@@ -301,6 +309,7 @@ public class ProductService {
         if(req.getListPrice() !=null) product.setListPrice(req.getListPrice());
 
         if (req.isRemoveVideo()) {
+            cloudinaryHelper.deleteByUrl(List.of(req.getVideo()));
             product.setUrlvideo(null);
         } else if (req.getVideo() != null) {
             product.setUrlvideo(req.getVideo());
@@ -343,7 +352,7 @@ public class ProductService {
         return getProductDetailResponse(product);
     }
 
-    @PreAuthorize("hasRole('ADMIN') or hasAuthority('VIEW__DETAIL_PRODUCT')")
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('VIEW_DETAIL_PRODUCT')")
     public ProductResponse getProductByIdForAdmin(Long id) {
         Product product = productRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Product not found"));
         return getProductDetailResponse(product);

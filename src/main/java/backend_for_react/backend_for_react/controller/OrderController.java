@@ -3,8 +3,10 @@ package backend_for_react.backend_for_react.controller;
 import backend_for_react.backend_for_react.common.enums.DeliveryStatus;
 import backend_for_react.backend_for_react.controller.request.Order.OrderCreationRequest;
 import backend_for_react.backend_for_react.controller.response.ApiResponse;
+import backend_for_react.backend_for_react.controller.response.OrderPricePreviewResponse;
 import backend_for_react.backend_for_react.controller.response.OrderResponse;
 import backend_for_react.backend_for_react.service.impl.OrderService;
+import com.cloudinary.Api;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -64,6 +66,17 @@ public class OrderController {
         result.put("data",orderId);
         return new ResponseEntity<>(result,HttpStatus.CREATED);
     }
+
+    @GetMapping("/preview")
+    public ApiResponse<OrderPricePreviewResponse> previewOrder(@RequestBody @Valid OrderCreationRequest req){
+        var result = orderService.previewOrderPrice(req);
+        return ApiResponse.<OrderPricePreviewResponse>builder()
+                .status(HttpStatus.OK.value())
+                .message("Order preview")
+                .data(result)
+                .build();
+    }
+
     @PostMapping("/changestatus/{orderId}")
     public ResponseEntity<Object> updateStatus(@PathVariable Long orderId , @RequestParam DeliveryStatus status){
         orderService.changeStatus(orderId,status);

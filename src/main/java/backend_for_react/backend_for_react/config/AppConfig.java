@@ -13,6 +13,7 @@ import com.sendgrid.SendGrid;
 import com.twilio.Twilio;
 import io.fusionauth.client.FusionAuthClient;
 import jakarta.annotation.PostConstruct;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationRunner;
@@ -26,11 +27,13 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Set;
 
 @Configuration
 @Slf4j
+@Data
 public class AppConfig {
 
     @Value("${spring.twilio.account-sid}")
@@ -43,6 +46,9 @@ public class AppConfig {
 
     @Value("${spring.fusionauth.baseUrl}")
     private String fusionAuthBaseUrl;
+
+    @Value("${app.point.value}")
+    public BigDecimal pointValue;
 
 //    @Value("${redis.host}")
 //    private String redisHost;
@@ -115,6 +121,8 @@ public class AppConfig {
                 User admin = User.builder()
                         .username("admin")
                         .fullName("Admin")
+                        .dateOfBirth(LocalDate.of(2005,1,2))
+                        .phone("0399097211")
                         .email("lhhuy2005@gmail.com")
                         .gender(Gender.MALE)
                         .totalSpent(BigDecimal.ZERO)

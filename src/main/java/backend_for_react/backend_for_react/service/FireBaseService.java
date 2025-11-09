@@ -1,6 +1,7 @@
 package backend_for_react.backend_for_react.service;
 
 import backend_for_react.backend_for_react.model.Order;
+import backend_for_react.backend_for_react.model.ReturnOrder;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -19,6 +20,14 @@ public class FireBaseService {
         FirebaseDatabase firebaseDatabase = FirebaseDatabase.getInstance(firebaseApp);
         var ref = firebaseDatabase.getReference().child(order.getUser().getId().toString()).child("orders").child(order.getId().toString());
         ref.setValue(order.toString(), (databaseError, databaseReference) -> {
+            log.info("Firebase update status");
+        });
+    }
+
+    public void updateStatusReturnOrder(ReturnOrder returnOrder){
+        FirebaseDatabase firebaseDatabase = FirebaseDatabase.getInstance(firebaseApp);
+        var ref = firebaseDatabase.getReference().child(returnOrder.getUser().getId().toString()).child("return_orders").child(returnOrder.getId().toString());
+        ref.setValue(returnOrder.toString(), (databaseError, databaseReference) -> {
             log.info("Firebase update status");
         });
     }

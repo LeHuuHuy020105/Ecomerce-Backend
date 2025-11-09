@@ -35,6 +35,8 @@ public class AttributeService {
     AttributeValueRepository attributeValueRepository;
     ProductRepository productRepository;
 
+    @Transactional
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('ADD_PRODUCT_ATTRIBUTE')")
     public void add(AttributeCreationRequest request , Long productId){
         Product product = productRepository.findByIdAndProductStatus(productId, ProductStatus.ACTIVE)
                 .orElseThrow(()-> new BusinessException(ErrorCode.BAD_REQUEST, MessageError.PRODUCT_NOT_FOUND));
@@ -55,6 +57,7 @@ public class AttributeService {
         attribute.setValues(attributeValues);
         attributeRepository.save(attribute);
     }
+
     @Transactional
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('UPDATE_PRODUCT_ATTRIBUTE')")
     public void update(Long productId, Long attributeId, AttributeUpdateRequest req) {
@@ -92,6 +95,7 @@ public class AttributeService {
         attributeRepository.save(attribute);
     }
 
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('ADD_PRODUCT_ATTRIBUTE_VALUE')")
     public void addAttributeValue(Long productId, Long attributeId, AttributeValueCreationRequest request){
         Product product = productRepository.findByIdAndProductStatus(productId, ProductStatus.ACTIVE)
                 .orElseThrow(()-> new BusinessException(ErrorCode.BAD_REQUEST, MessageError.PRODUCT_NOT_FOUND));
@@ -109,7 +113,7 @@ public class AttributeService {
     }
 
     @Transactional
-    @PreAuthorize("hasRole('ADMIN') or hasAuthority('UPDATE_PRODUCT_VARIANT')")
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('UPDATE_PRODUCT_ATTRIBUTE_VALUE')")
         public void updateAttributeValue(Long productId, Long attributeValueId, AttributeValueUpdateRequest req) {
         AttributeValue attributeValue = attributeValueRepository.findByIdAndStatus(attributeValueId,Status.ACTIVE)
                 .orElseThrow(() -> new BusinessException(ErrorCode.BAD_REQUEST, "Attribute value not found"));
@@ -122,7 +126,7 @@ public class AttributeService {
     }
 
     @Transactional
-    @PreAuthorize("hasRole('ADMIN') or hasAuthority('DELETE_PRODUCT_VARIANT')")
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('DELETE_PRODUCT_ATTRIBUTE_VALUE')")
     public void deleteAttributeValue(Long productId, Long attributeValueId) {
         AttributeValue attributeValue = attributeValueRepository.findByIdAndStatus(attributeValueId,Status.ACTIVE)
                 .orElseThrow(() -> new BusinessException(ErrorCode.BAD_REQUEST, "Attribute value not found"));
@@ -138,6 +142,8 @@ public class AttributeService {
         attributeValueRepository.save(attributeValue);
     }
 
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('DELETE_PRODUCT_ATTRIBUTE_VALUE_IMAGE')")
+    @Transactional
     public void deleteImageAttributeValue(Long productId, Long attributeValueId){
         Product product = productRepository.findByIdAndProductStatus(productId, ProductStatus.ACTIVE)
                 .orElseThrow(()-> new BusinessException(ErrorCode.BAD_REQUEST, MessageError.PRODUCT_NOT_FOUND));

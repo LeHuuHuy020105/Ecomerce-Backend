@@ -22,9 +22,13 @@ public class UserMapper {
                 .gender(user.getGender())
                 .dateOfBirth(user.getDateOfBirth())
                 .email(user.getEmail())
+                .point(user.getPoint())
                 .avatar(user.getAvatarImage())
                 .totalSpent(user.getTotalSpent())
                 .phone(user.getPhone())
+                .status(user.getStatus())
+                .verifiedEmail(user.getEmailVerified())
+                .addressResponses(user.getUserHasAddresses().stream().map(UserMapper::getAddressResponse).toList())
                 .userRankResponse(UserRankMapper.toUserRankResponse(user.getUserRank()))
                 .roles(roleResponses)
                 .build();
@@ -38,11 +42,14 @@ public class UserMapper {
                 .id(user.getId())
                 .userName(user.getUsername())
                 .fullName(user.getFullName())
+                .status(user.getStatus())
                 .gender(user.getGender())
                 .dateOfBirth(user.getDateOfBirth())
                 .email(user.getEmail())
+                .point(user.getPoint())
+                .verifiedEmail(user.getEmailVerified())
                 .avatar(user.getAvatarImage())
-                .addressResponses(addressResponses)
+                .addressResponses(user.getUserHasAddresses().stream().map(UserMapper::getAddressResponse).toList())
                 .build();
     }
 

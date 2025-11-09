@@ -29,6 +29,8 @@ public class OrderResponse {
     String deliveryWardCode;
     String deliveryAddress;
     BigDecimal totalAmount;
+    String note;
+
     BigDecimal originalOrderAmount;
     DeliveryStatus deliveryStatus;
     PaymentStatus paymentStatus;

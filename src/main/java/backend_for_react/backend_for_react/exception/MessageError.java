@@ -4,7 +4,7 @@ public interface MessageError {
     /***
      * Not found
      */
-    String USER_NOT_FOUND = "User not found";
+    String USER_NOT_FOUND = "User not found or user is locked";
     String PERMISSION_NOT_FOUND = "Permission not found";
     String PRODUCT_NOT_FOUND = "Product not found";
     String URL_NOT_FOUND = "Url not found";

@@ -1,6 +1,8 @@
 package backend_for_react.backend_for_react.state.ReturnOrder;
 
 import backend_for_react.backend_for_react.common.enums.ReturnStatus;
+import backend_for_react.backend_for_react.exception.BusinessException;
+import backend_for_react.backend_for_react.exception.ErrorCode;
 import backend_for_react.backend_for_react.model.ReturnOrder;
 import backend_for_react.backend_for_react.repository.ProductVariantRepository;
 import backend_for_react.backend_for_react.service.GhnService;
@@ -26,7 +28,7 @@ public class ReturnOrderContext {
             case COMPLETED -> new CompletedState(productVariantRepository);
             case PAYMENTED -> new PaymentedState();
             case REJECTED -> new RejectedState();
-            case CANCEL -> null;
+            case CANCEL -> throw new BusinessException(ErrorCode.BAD_REQUEST, "You can't change status because current status is CANCEL");
         };
     }
 

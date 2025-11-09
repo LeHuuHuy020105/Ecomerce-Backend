@@ -60,6 +60,6 @@ public class ProductCreationRequest implements Serializable {
         if (listPrice == null || salePrice == null) {
             return true; // bỏ qua nếu không cập nhật giá
         }
-        return listPrice.compareTo(salePrice) > 0;
+        return listPrice.compareTo(salePrice) >= 0;
     }
 }

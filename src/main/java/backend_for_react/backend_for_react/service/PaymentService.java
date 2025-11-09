@@ -62,7 +62,7 @@ public class PaymentService {
 
         String vnp_TxnRef = "ORD" + orderId + "_" + System.currentTimeMillis();
 
-
+        log.info("vnp_ReturnUrl : ", vnpayConfig.getVnpReturnUrl());
         Map<String, String> vnp_Params = new HashMap<>();
         vnp_Params.put("vnp_Version", vnpayConfig.getVnpVersion());
         vnp_Params.put("vnp_Command", vnpayConfig.getVnpCommand());

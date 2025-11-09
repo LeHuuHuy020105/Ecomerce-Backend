@@ -70,6 +70,8 @@ public class Order extends BaseEntity{
 
     private String orderTrackingCode;
 
+    private String note;
+
     boolean isPaidForShip = false;
 
     @Column(name = "total_amount")

@@ -42,6 +42,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /***
  * Xu li JWT
@@ -97,6 +98,7 @@ public class AuthenticationService {
         return AuthenticationResponse.builder()
                 .token(token)
                 .authenticated(true)
+                .role(user.getRoles().stream().map(Role::getName).collect(Collectors.toSet()))
                 .expiredAt(new Date(Instant.now().plus(VALID_DURATION, ChronoUnit.SECONDS).toEpochMilli()))
                 .build();
 
@@ -250,8 +252,6 @@ public class AuthenticationService {
         if (!CollectionUtils.isEmpty(user.getRoles()))
             user.getRoles().forEach(role -> {
                 stringJoiner.add("ROLE_" + role.getName());
-                if (!CollectionUtils.isEmpty(role.getPermissions()))
-                    role.getPermissions().forEach(permission -> stringJoiner.add(permission.getName()));
             });
 
         return stringJoiner.toString();
@@ -313,9 +313,9 @@ public class AuthenticationService {
             roles.add(role);
         }
         user.setRoles(roles);
+        user.setStatus(UserStatus.ACTIVE);
         userRepository.save(user);
 
-        otpService.sendOTP(user, OTPType.VERIFICATION);
         return user.getId();
     }
 }

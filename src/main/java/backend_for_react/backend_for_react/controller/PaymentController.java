@@ -40,14 +40,12 @@ public class PaymentController {
     }
 
     @GetMapping("/vnpay-return")
-    public void returnPayment(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        public ApiResponse<Boolean> returnPayment(HttpServletRequest request) throws IOException {
         boolean success = paymentService.vnpayCallback(request); // sửa hàm này trả boolean
-        if (success) {
-            // Nếu thành công, redirect về FE
-            response.sendRedirect("http://localhost:3000/payment-success");
-        } else {
-            // Nếu thất bại, redirect về FE
-            response.sendRedirect("http://localhost:3000/payment-failed");
-        }
+        return ApiResponse.<Boolean>builder()
+                .status(HttpStatus.OK.value())
+                .message("Return payment ")
+                .data(success)
+                .build();
     }
 }

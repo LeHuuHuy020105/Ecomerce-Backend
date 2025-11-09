@@ -62,6 +62,7 @@ public class AuthenticationController {
         response.addCookie(cookie);
 
         return ApiResponse.<Void>builder()
+                .status(HttpStatus.OK.value())
                 .message("Đăng xuất thành công")
                 .build();
     }

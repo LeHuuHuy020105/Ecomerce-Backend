@@ -11,6 +11,7 @@ public class RoleMapper {
     public static RoleResponse getRoleResponse(Role role){
         Set<PermissionResponse> permissionResponses = new HashSet<>(role.getPermissions().stream().map(PermissionMapper::getPermissionResponse).toList());
         return RoleResponse.builder()
+                .id(role.getId())
                 .name(role.getName())
                 .description(role.getDescription())
                 .permissions(permissionResponses)

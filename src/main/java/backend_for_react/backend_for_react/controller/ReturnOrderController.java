@@ -48,6 +48,17 @@ public class ReturnOrderController {
         return new ResponseEntity<>(result, HttpStatus.OK);
     }
 
+    @GetMapping("/list/me")
+    public ResponseEntity<Object> findAllForMe(@RequestParam(required = false) String sort,
+                                          @RequestParam(defaultValue = "0") int page,
+                                          @RequestParam(defaultValue = "10") int size) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("status", HttpStatus.OK.value());
+        result.put("message", "user list");
+        result.put("data", returnOrderService.findAllForMe(sort, page, size));
+        return new ResponseEntity<>(result, HttpStatus.OK);
+    }
+
     @DeleteMapping("/cancel/{returnOrderId}")
     public ApiResponse<Void> cancel(@PathVariable Long returnOrderId){
         returnOrderService.cancelReturnOrder(returnOrderId);

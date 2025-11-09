@@ -53,7 +53,7 @@ public class ImportProductService {
     SupplierService supplierService;
     ProductService productServiceImpl;
 
-    @PreAuthorize("hasRole('ADMIN') or hasAuthority('VIEW_IMPORT_PRODUCT')")
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('VIEW_ALL_IMPORT_PRODUCT')")
     public PageResponse<ImportProductResponse> findAll(
             String keyword, String sort, int page, int size,
             String timeRange, LocalDateTime startDate, LocalDateTime endDate,

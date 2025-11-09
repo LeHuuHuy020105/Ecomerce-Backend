@@ -75,7 +75,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    @PreAuthorize("hasRole('ADMIN') or hasAuthority('CREATE_CATEGORIES')")
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('RESTORE_CATEGORIES')")
     @Override
     public void restore(Long id){
         Category category = categoryRepository.findById(id)
@@ -123,6 +123,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('MOVE_CATEGORIES')")
     public void moveCategory(MoveCategoryRequest request){
         Category currentCategory = categoryRepository.findByIdAndStatus(request.getCategoryId(),Status.ACTIVE)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_EXISTED,MessageError.CATEGORY_NOT_FOUND));
@@ -141,6 +142,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Transactional(rollbackFor = Exception.class)
     @Override
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('UPDATE_CATEGORIES')")
     public void update(CategoryUpdateRequest req) {
         Category category = categoryRepository.findByIdAndStatus(req.getId(),Status.ACTIVE)
                 .orElseThrow(()-> new BusinessException(ErrorCode.BAD_REQUEST,MessageError.CATEGORY_NOT_FOUND));
@@ -165,6 +167,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Transactional(rollbackFor = Exception.class)
     @Override
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('DELETE_CATEGORIES')")
     public void delete(Long id) {
         Category category = categoryRepository.findById(id).orElseThrow(()-> new BusinessException(ErrorCode.NOT_EXISTED,MessageError.CATEGORY_NOT_FOUND));
         updateChildrentStatus(category,Status.INACTIVE);
@@ -175,6 +178,7 @@ public class CategoryServiceImpl implements CategoryService {
 
 
     @Override
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('VIEW_DETAIL_CATEGORIES')")
     public CategoryResponse getCategoryById(Long id) {
         Category category = categoryRepository.findByIdAndStatus(id,Status.ACTIVE)
                 .orElseThrow(()-> new BusinessException(ErrorCode.BAD_REQUEST,MessageError.CATEGORY_NOT_FOUND));

@@ -60,8 +60,10 @@ public class ReturnOrderService {
     SecurityUtils securityUtils;
     ProductVariantRepository productVariantRepository;
     ImageReturnOrderRepository imageReturnOrderRepository;
+    FireBaseService fireBaseService;
 
 
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('VIEW_ALL_RETURN_ORDER')")
     public PageResponse<ReturnOrderResponse> findAll(String sort, int page, int size) {
         Sort order = Sort.by(Sort.Direction.ASC, "id");
         if (sort != null && !sort.isEmpty()) {
@@ -83,6 +85,32 @@ public class ReturnOrderService {
         Pageable pageable = PageRequest.of(pageNo, size, order);
         Page<ReturnOrder> returnOrders = null;
         returnOrders = returnOrderRepository.findAll(pageable);
+        PageResponse response = getProductPageResponse(pageNo, size, returnOrders);
+        return response;
+    }
+
+    public PageResponse<ReturnOrderResponse> findAllForMe(String sort, int page, int size) {
+        User user = securityUtils.getCurrentUser();
+        Sort order = Sort.by(Sort.Direction.ASC, "id");
+        if (sort != null && !sort.isEmpty()) {
+            Pattern pattern = Pattern.compile("(\\w+?)(:)(.*)");
+            Matcher matcher = pattern.matcher(sort);
+            if (matcher.find()) {
+                String columnName = matcher.group(1);
+                if (matcher.group(3).equalsIgnoreCase("asc")) {
+                    order = Sort.by(Sort.Direction.ASC, columnName);
+                } else {
+                    order = Sort.by(Sort.Direction.DESC, columnName);
+                }
+            }
+        }
+        int pageNo = 0;
+        if (page > 0) {
+            pageNo = page - 1;
+        }
+        Pageable pageable = PageRequest.of(pageNo, size, order);
+        Page<ReturnOrder> returnOrders = null;
+        returnOrders = returnOrderRepository.findAllByUser(user,pageable);
         PageResponse response = getProductPageResponse(pageNo, size, returnOrders);
         return response;
     }
@@ -151,7 +179,7 @@ public class ReturnOrderService {
             returnItem.setOrderItem(orderItem);
             returnItem.setQuantity(itemRequest.getQuantity());
 
-            BigDecimal itemRefund = orderItem.getProductVariant().getPrice()
+            BigDecimal itemRefund = orderItem.getFinalPrice()
                     .multiply(BigDecimal.valueOf(itemRequest.getQuantity()));
             returnItem.setItemRefundAmount(itemRefund);
 
@@ -205,6 +233,8 @@ public class ReturnOrderService {
         returnOrderItemRepository.saveAll(returnItems);
         if (!imageReturnOrders.isEmpty()) imageReturnOrderRepository.saveAll(imageReturnOrders);
 
+        fireBaseService.updateStatusReturnOrder(returnOrder);
+
         log.info("ReturnOrder created: id={}, refundAmount={}", returnOrder.getId(), refundAmount);
         return returnOrder;
     }
@@ -213,13 +243,15 @@ public class ReturnOrderService {
     @Transactional(rollbackFor = Exception.class)
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('CHANGE_STATUS_RETURN_ORDER')")
     public void changeStatus(Long returnOrderId, ReturnStatus newStatus) {
-        ReturnOrder order = returnOrderRepository.findById(returnOrderId)
+        ReturnOrder returnOrder = returnOrderRepository.findById(returnOrderId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.BAD_REQUEST, "Return order not found"));
 
-        ReturnOrderContext context = new ReturnOrderContext(order,productVariantRepository,ghnService);
+        ReturnOrderContext context = new ReturnOrderContext(returnOrder,productVariantRepository,ghnService);
         context.changeState(newStatus);
 
-        returnOrderRepository.save(order);
+        returnOrderRepository.save(returnOrder);
+
+        fireBaseService.updateStatusReturnOrder(returnOrder);
     }
 
 
@@ -233,6 +265,8 @@ public class ReturnOrderService {
         }
         returnOrder.setStatus(ReturnStatus.CANCEL);
         returnOrderRepository.save(returnOrder);
+
+        fireBaseService.updateStatusReturnOrder(returnOrder);
     }
 
     private PageResponse<ReturnOrderResponse> getProductPageResponse(int page, int size, Page<ReturnOrder> returnOrders) {
@@ -272,7 +306,6 @@ public class ReturnOrderService {
                 .totalWidth(returnOrder.getTotalWidth())
                 .status(returnOrder.getStatus())
                 .refundAmount(returnOrder.getRefundAmount())
-                .userResponse(UserMapper.getUserResponse(returnOrder.getUser()))
                 .reason(returnOrder.getReason())
                 .imageReturnOrders(imageReturnOrderResponses)
                 .returnTrackingCode(returnOrder.getReturnTrackingCode())

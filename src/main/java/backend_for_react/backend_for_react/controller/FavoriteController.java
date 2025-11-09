@@ -1,6 +1,7 @@
 package backend_for_react.backend_for_react.controller;
 
 import backend_for_react.backend_for_react.controller.response.ApiResponse;
+import backend_for_react.backend_for_react.controller.response.PageResponse;
 import backend_for_react.backend_for_react.controller.response.ProductBaseResponse;
 import backend_for_react.backend_for_react.service.FavoriteService;
 import lombok.AccessLevel;
@@ -19,9 +20,12 @@ public class FavoriteController {
     FavoriteService favoriteService;
 
     @GetMapping("/listForMe")
-    public ApiResponse<List<ProductBaseResponse>> getFavoritesForMe() {
-        List<ProductBaseResponse> favorites = favoriteService.getFavorites();
-        return ApiResponse.<List<ProductBaseResponse>>builder()
+    public ApiResponse<PageResponse<ProductBaseResponse>> getFavoritesForMe(@RequestParam(required = false) String keyword,
+                                                                            @RequestParam(required = false) String sort,
+                                                                            @RequestParam(defaultValue = "0") int page,
+                                                                            @RequestParam(defaultValue = "10") int size) {
+        PageResponse<ProductBaseResponse> favorites = favoriteService.findAll(keyword, sort, page, size);
+        return ApiResponse.<PageResponse<ProductBaseResponse>>builder()
                 .status(HttpStatus.OK.value())
                 .message("List favorites")
                 .data(favorites)

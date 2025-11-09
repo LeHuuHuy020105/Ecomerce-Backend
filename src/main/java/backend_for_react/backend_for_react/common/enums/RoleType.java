@@ -5,8 +5,8 @@ import java.math.BigDecimal;
 public enum RoleType {
     ADMIN("Administrator"),
     USER("User"),
-    SALES_MANAGER("Sales Manager"),
-    WAREHOUSE_MANAGER("Warehouse Manager");
+    WAREHOUSE_STAFF("Warehouse staff"),
+    ORDER_STAFF("Order staff");
 
     private final String description;
 

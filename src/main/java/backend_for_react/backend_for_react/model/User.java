@@ -91,6 +91,8 @@ public class User extends BaseEntity {
     List<VoucherUsage> voucherUsages;
 
 
+    Integer point = 0;
+
     @ManyToOne(fetch = FetchType.LAZY)
     UserRank userRank;
 

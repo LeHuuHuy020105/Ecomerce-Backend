@@ -5,12 +5,14 @@ import backend_for_react.backend_for_react.controller.request.Review.ReviewUpdat
 import backend_for_react.backend_for_react.controller.response.ApiResponse;
 import backend_for_react.backend_for_react.controller.response.ReviewResponse;
 import backend_for_react.backend_for_react.service.impl.ReviewService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,9 +23,34 @@ import java.util.Map;
 public class ReviewController {
     private final ReviewService reviewService;
 
+    @GetMapping("/product/{productId}/list")
+    public ResponseEntity<Object> findAll(@RequestParam(required = false) String sort,
+                                          @RequestParam(defaultValue = "0") int page,
+                                          @RequestParam(defaultValue = "10") int size,
+                                          @PathVariable Long productId){
+        Map<String,Object> result = new LinkedHashMap<>();
+        result.put("status", HttpStatus.OK.value());
+        result.put("message","review list");
+        result.put("data",reviewService.findAll(productId,sort,page,size));
+        return new ResponseEntity<>(result,HttpStatus.OK);
+    }
+
+    @GetMapping("/productVariant/{productVariantId}/list")
+    public ResponseEntity<Object> findAll(@PathVariable Long productVariantId,
+                                          @RequestParam(required = false) Boolean hasImage,
+                                          @RequestParam(required = false) String sort,
+                                          @RequestParam(defaultValue = "0") int page,
+                                          @RequestParam(defaultValue = "10") int size){
+        Map<String,Object> result = new LinkedHashMap<>();
+        result.put("status", HttpStatus.OK.value());
+        result.put("message","review list");
+        result.put("data",reviewService.findAllForFilter(productVariantId,hasImage,sort,page,size));
+        return new ResponseEntity<>(result,HttpStatus.OK);
+    }
+
     @PostMapping("/add")
     public ResponseEntity<Object> addReview(
-           @RequestBody ReviewCreationRequest req) {
+           @RequestBody @Valid ReviewCreationRequest req) {
         Long reviewId = reviewService.save(req);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("status", HttpStatus.CREATED.value());
@@ -40,9 +67,9 @@ public class ReviewController {
     }
 
     @GetMapping("/product/{productId}")
-    public ApiResponse<ReviewResponse> getReviewMeByProduct(@PathVariable Long productId) {
+    public ApiResponse<List<ReviewResponse>> getReviewMeByProduct(@PathVariable Long productId) {
         var result = reviewService.getReviewMeByProduct(productId);
-        return ApiResponse.<ReviewResponse>builder()
+        return ApiResponse.<List<ReviewResponse>>builder()
                 .status(HttpStatus.OK.value())
                 .message("Get review me by product")
                 .data(result)
@@ -50,19 +77,13 @@ public class ReviewController {
     }
 
     @PutMapping("/delete-image")
-    public void deleteImage(@RequestPart List<Long> imageDelete) {
+    public void deleteImage(@RequestPart List<Long> imageDelete) throws IOException {
         reviewService.deleteImage(imageDelete);
     }
 
     @PutMapping("/{reviewid}/add-image")
     public void deleteImage(@RequestPart List<String> imageAdd , @PathVariable Long reviewId) {
         reviewService.addImage(imageAdd,reviewId);
-    }
-
-    @DeleteMapping("/{reviewId}/delete")
-    public ResponseEntity<String> deleteUser(@PathVariable Long reviewId) {
-        reviewService.delete(reviewId);
-        return new ResponseEntity<>("", HttpStatus.OK);
     }
 
     @GetMapping("/{reviewId}")

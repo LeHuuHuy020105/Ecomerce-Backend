@@ -10,6 +10,7 @@ import backend_for_react.backend_for_react.controller.request.VariantQuantityUpd
 import backend_for_react.backend_for_react.controller.response.ApiResponse;
 import backend_for_react.backend_for_react.controller.response.PageResponse;
 import backend_for_react.backend_for_react.controller.response.ProductBaseResponse;
+import backend_for_react.backend_for_react.controller.response.ProductResponse;
 import backend_for_react.backend_for_react.model.AttributeValue;
 import backend_for_react.backend_for_react.service.impl.ProductService;
 import jakarta.validation.Valid;
@@ -90,6 +91,16 @@ public class ProductController {
                 .build();
     }
 
+    @GetMapping("/list/detail")
+    public ApiResponse<List<ProductResponse>> getAllDetailProduct(){
+        var result = productService.getDetailAllProduct();
+        return  ApiResponse.<List<ProductResponse>>builder()
+                .status(HttpStatus.OK.value())
+                .message("Product list")
+                .data(result)
+                .build();
+    }
+
     @PostMapping("/add")
     public ApiResponse<Void> createProduct(@RequestBody @Valid ProductCreationRequest req) throws IOException {
         productService.save(req);
@@ -100,7 +111,7 @@ public class ProductController {
     }
     
     @PutMapping("/update")
-    public ResponseEntity<String> updateProduct (@RequestBody @Valid ProductUpdateRequest req){
+    public ResponseEntity<String> updateProduct (@RequestBody @Valid ProductUpdateRequest req) throws IOException {
         productService.update(req);
         return new ResponseEntity<>("",HttpStatus.OK);
     }
@@ -149,13 +160,13 @@ public class ProductController {
                 .build();
     }
 
-    @DeleteMapping("/{productId}/variants/{variantId}/delete")
-    public ApiResponse<Void> deleteVariant(@PathVariable Long productId ,
-                                             @PathVariable Long variantId){
-        productService.deleteVariant(productId,variantId);
-        return ApiResponse.<Void>builder()
-                .status(HttpStatus.OK.value())
-                .message("variant deleted")
-                .build();
-    }
+//    @DeleteMapping("/{productId}/variants/{variantId}/delete")
+//    public ApiResponse<Void> deleteVariant(@PathVariable Long productId ,
+//                                             @PathVariable Long variantId){
+//        productService.deleteVariant(productId,variantId);
+//        return ApiResponse.<Void>builder()
+//                .status(HttpStatus.OK.value())
+//                .message("variant deleted")
+//                .build();
+//    }
 }
