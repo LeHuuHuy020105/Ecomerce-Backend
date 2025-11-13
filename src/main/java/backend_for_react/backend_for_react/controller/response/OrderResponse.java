@@ -30,7 +30,8 @@ public class OrderResponse {
     String deliveryAddress;
     BigDecimal totalAmount;
     String note;
-
+    BigDecimal totalFeeShip;
+    BigDecimal discountValue;
     BigDecimal originalOrderAmount;
     DeliveryStatus deliveryStatus;
     PaymentStatus paymentStatus;

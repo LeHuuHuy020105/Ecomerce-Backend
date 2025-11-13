@@ -3,6 +3,7 @@ package backend_for_react.backend_for_react.controller;
 import backend_for_react.backend_for_react.controller.request.Review.ReviewCreationRequest;
 import backend_for_react.backend_for_react.controller.request.Review.ReviewUpdateRequest;
 import backend_for_react.backend_for_react.controller.response.ApiResponse;
+import backend_for_react.backend_for_react.controller.response.CalculatorReviewRatingResponse;
 import backend_for_react.backend_for_react.controller.response.ReviewResponse;
 import backend_for_react.backend_for_react.service.impl.ReviewService;
 import jakarta.validation.Valid;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +39,7 @@ public class ReviewController {
 
     @GetMapping("/productVariant/{productVariantId}/list")
     public ResponseEntity<Object> findAll(@PathVariable Long productVariantId,
+                                          @RequestParam(required = false) Integer rating,
                                           @RequestParam(required = false) Boolean hasImage,
                                           @RequestParam(required = false) String sort,
                                           @RequestParam(defaultValue = "0") int page,
@@ -44,8 +47,18 @@ public class ReviewController {
         Map<String,Object> result = new LinkedHashMap<>();
         result.put("status", HttpStatus.OK.value());
         result.put("message","review list");
-        result.put("data",reviewService.findAllForFilter(productVariantId,hasImage,sort,page,size));
+        result.put("data",reviewService.findAllForFilter(productVariantId,rating,hasImage,sort,page,size));
         return new ResponseEntity<>(result,HttpStatus.OK);
+    }
+
+    @PostMapping("/calculator/{productId}/rating")
+    public ApiResponse<List<CalculatorReviewRatingResponse>> calculateRating(@PathVariable Long productId){
+        List<CalculatorReviewRatingResponse> result = reviewService.calculatorReviewForFilterRating(productId);
+        return ApiResponse.<List<CalculatorReviewRatingResponse>>builder()
+                .status(HttpStatus.OK.value())
+                .message("calculating rating")
+                .data(result)
+                .build();
     }
 
     @PostMapping("/add")

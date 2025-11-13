@@ -7,10 +7,7 @@ import backend_for_react.backend_for_react.common.utils.CloudinaryHelper;
 import backend_for_react.backend_for_react.common.utils.SecurityUtils;
 import backend_for_react.backend_for_react.controller.request.Review.ReviewCreationRequest;
 import backend_for_react.backend_for_react.controller.request.Review.ReviewUpdateRequest;
-import backend_for_react.backend_for_react.controller.response.ImageResponse;
-import backend_for_react.backend_for_react.controller.response.PageResponse;
-import backend_for_react.backend_for_react.controller.response.ProductBaseResponse;
-import backend_for_react.backend_for_react.controller.response.ReviewResponse;
+import backend_for_react.backend_for_react.controller.response.*;
 import backend_for_react.backend_for_react.exception.BusinessException;
 import backend_for_react.backend_for_react.exception.ErrorCode;
 import backend_for_react.backend_for_react.exception.MessageError;
@@ -73,7 +70,11 @@ public class ReviewService {
         return response;
     }
 
-    public PageResponse<ProductBaseResponse> findAllForFilter(Long productVariantId, Boolean hasImage,String sort, int page, int size) {
+    public List<CalculatorReviewRatingResponse> calculatorReviewForFilterRating(Long productId){
+        return reviewRepository.calculatorReviewForFilterRating(productId);
+    }
+
+    public PageResponse<ProductBaseResponse> findAllForFilter(Long productVariantId,Integer rating, Boolean hasImage,String sort, int page, int size) {
         Sort order = Sort.by(Sort.Direction.ASC, "id");
         if (sort != null && !sort.isEmpty()) {
             Pattern pattern = Pattern.compile("(\\w+?)(:)(.*)");
@@ -92,7 +93,7 @@ public class ReviewService {
             pageNo = page - 1;
         }
         Pageable pageable = PageRequest.of(pageNo, size, order);
-        Page<Review> reviews = reviewRepository.findAllByFilter(productVariantId, hasImage, pageable);
+        Page<Review> reviews = reviewRepository.findAllByFilter(productVariantId, hasImage, rating, pageable);
 
         PageResponse response = getReviewPageResponse(pageNo, size, reviews);
         return response;

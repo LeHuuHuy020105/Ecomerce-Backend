@@ -28,6 +28,8 @@ public class OrderMapper {
                 .deliveryDistrictName(order.getDeliveryDistrictName())
                 .deliveryProvinceName(order.getDeliveryProvinceName())
                 .note(order.getNote())
+                .totalFeeShip(order.getTotalFeeForShip())
+                .discountValue(order.getVoucherDiscountValue())
                 .deliveryWardCode(order.getDeliveryWardCode())
                 .deliveryAddress(order.getDeliveryAddress())
                 .totalAmount(order.getTotalAmount())

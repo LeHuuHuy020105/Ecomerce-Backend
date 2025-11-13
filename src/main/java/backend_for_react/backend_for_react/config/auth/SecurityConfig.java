@@ -60,7 +60,8 @@ public class SecurityConfig {
             "/payment/vnpay-return",
             "/product/list/detail",
             "/review/product/list/**",
-            "/review/productVariant/**"
+            "/review/productVariant/**",
+            "/review/calculator/**"
     };
     private final String[] SWAGGER_ENDPOINTS = {
             "/v3/**",
