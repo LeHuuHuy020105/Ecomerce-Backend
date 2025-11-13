@@ -45,7 +45,7 @@ public class SecurityConfig {
             "/orders/add",
             "/sendgrid/otp",
             "/product/list",
-            "/products/category/*",
+            "/product/products/category/*",
             "/product/detail/**",
             "/fushionAuth/**",
             "/user/calculator_point",

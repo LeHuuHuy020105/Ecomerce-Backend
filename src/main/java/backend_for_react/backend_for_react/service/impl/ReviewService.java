@@ -98,6 +98,18 @@ public class ReviewService {
         PageResponse response = getReviewPageResponse(pageNo, size, reviews);
         return response;
     }
+
+    public Boolean checkExistReviewOrder(Long orderItemId){
+        User currentUser = securityUtils.getCurrentUser();
+        if(currentUser == null){
+            throw new BusinessException(ErrorCode.UNAUTHORIZED,MessageError.UNAUTHORIZED);
+        }
+        if (reviewRepository.existsByOrderItemIdAndUser(orderItemId,currentUser)) {
+            throw new BusinessException(ErrorCode.DUPLICATE, "You have already reviewed this item");
+        }
+        return true;
+    }
+
     public Long  save(ReviewCreationRequest req) {
         User currentUser = securityUtils.getCurrentUser();
         if (currentUser == null) {

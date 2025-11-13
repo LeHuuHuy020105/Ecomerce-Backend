@@ -25,7 +25,7 @@ import java.util.Map;
 public class ReviewController {
     private final ReviewService reviewService;
 
-    @GetMapping("/product/{productId}/list")
+    @GetMapping("/product/list/{productId}")
     public ResponseEntity<Object> findAll(@RequestParam(required = false) String sort,
                                           @RequestParam(defaultValue = "0") int page,
                                           @RequestParam(defaultValue = "10") int size,
@@ -58,6 +58,15 @@ public class ReviewController {
                 .status(HttpStatus.OK.value())
                 .message("calculating rating")
                 .data(result)
+                .build();
+    }
+
+    @PostMapping("/checkexisted/{orderItemId}")
+    public ApiResponse<Boolean> checkExisted(@PathVariable Long orderItemId){
+        return ApiResponse.<Boolean>builder()
+                .status(HttpStatus.OK.value())
+                .message("Check existed")
+                .data(reviewService.checkExistReviewOrder(orderItemId))
                 .build();
     }
 
