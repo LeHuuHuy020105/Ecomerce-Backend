@@ -10,5 +10,5 @@ import java.util.Optional;
 
 @Repository
 public interface ImageReviewRepository extends JpaRepository<ImageReview, Long> {
-    Optional<ImageReview> findByIdAndStatus(Long id, Status status);
+    Optional<ImageReview> findByIdAndStatusAndReviewId(Long id, Status status, Long reviewId);
 }

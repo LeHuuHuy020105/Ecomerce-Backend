@@ -22,6 +22,7 @@ public class ReviewResponse implements Serializable {
     private Integer rating;
     private String comment;
     private String status;
+    private Boolean hasReview;
     private List<ImageResponse> images; // trả danh sách URL hoặc base64
     private LocalDateTime createdDate; // lấy từ BaseEntity
 }

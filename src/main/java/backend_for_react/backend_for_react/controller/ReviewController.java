@@ -61,14 +61,6 @@ public class ReviewController {
                 .build();
     }
 
-    @PostMapping("/checkexisted/{orderItemId}")
-    public ApiResponse<Boolean> checkExisted(@PathVariable Long orderItemId){
-        return ApiResponse.<Boolean>builder()
-                .status(HttpStatus.OK.value())
-                .message("Check existed")
-                .data(reviewService.checkExistReviewOrder(orderItemId))
-                .build();
-    }
 
     @PostMapping("/add")
     public ResponseEntity<Object> addReview(
@@ -98,13 +90,13 @@ public class ReviewController {
                 .build();
     }
 
-    @PutMapping("/delete-image")
-    public void deleteImage(@RequestPart List<Long> imageDelete) throws IOException {
-        reviewService.deleteImage(imageDelete);
+    @PutMapping("/{reviewId}/delete-image")
+    public void deleteImage(@RequestBody List<Long> imageDelete , @PathVariable Long reviewId) throws IOException {
+        reviewService.deleteImage(imageDelete , reviewId);
     }
 
-    @PutMapping("/{reviewid}/add-image")
-    public void deleteImage(@RequestPart List<String> imageAdd , @PathVariable Long reviewId) {
+    @PutMapping("/{reviewId}/add-image")
+    public void addImage(@RequestBody List<String> imageAdd , @PathVariable Long reviewId) {
         reviewService.addImage(imageAdd,reviewId);
     }
 

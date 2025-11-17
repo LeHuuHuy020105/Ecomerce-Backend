@@ -37,6 +37,10 @@ public class OrderItem extends BaseEntity {
     private int returnedQuantity = 0;
 
 
+    @Column(nullable = false)
+    private Boolean isReviewed = false;
+
+
     // Giá thực tế sau khi trừ khuyến mãi/voucher
     @Column(precision = 15, scale = 2, nullable = false)
     private BigDecimal finalPrice;

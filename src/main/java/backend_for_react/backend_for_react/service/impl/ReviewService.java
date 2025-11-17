@@ -43,7 +43,7 @@ public class ReviewService {
     private final UserRepository userRepository;
     private final CloudinaryHelper cloudinaryHelper;
 
-    public PageResponse<ProductBaseResponse> findAll(Long productId, String sort, int page, int size) {
+    public PageResponse<ReviewResponse> findAll(Long productId, String sort, int page, int size) {
         Product product = productRepository.findByIdAndProductStatus(productId,ProductStatus.ACTIVE)
                 .orElseThrow(()-> new BusinessException(ErrorCode.BAD_REQUEST,MessageError.PRODUCT_NOT_FOUND));
         Sort order = Sort.by(Sort.Direction.ASC, "id");
@@ -74,7 +74,7 @@ public class ReviewService {
         return reviewRepository.calculatorReviewForFilterRating(productId);
     }
 
-    public PageResponse<ProductBaseResponse> findAllForFilter(Long productVariantId,Integer rating, Boolean hasImage,String sort, int page, int size) {
+    public PageResponse<ReviewResponse> findAllForFilter(Long productVariantId,Integer rating, Boolean hasImage,String sort, int page, int size) {
         Sort order = Sort.by(Sort.Direction.ASC, "id");
         if (sort != null && !sort.isEmpty()) {
             Pattern pattern = Pattern.compile("(\\w+?)(:)(.*)");
@@ -99,16 +99,6 @@ public class ReviewService {
         return response;
     }
 
-    public Boolean checkExistReviewOrder(Long orderItemId){
-        User currentUser = securityUtils.getCurrentUser();
-        if(currentUser == null){
-            throw new BusinessException(ErrorCode.UNAUTHORIZED,MessageError.UNAUTHORIZED);
-        }
-        if (reviewRepository.existsByOrderItemIdAndUser(orderItemId,currentUser)) {
-            throw new BusinessException(ErrorCode.DUPLICATE, "You have already reviewed this item");
-        }
-        return true;
-    }
 
     public Long  save(ReviewCreationRequest req) {
         User currentUser = securityUtils.getCurrentUser();
@@ -155,6 +145,8 @@ public class ReviewService {
         userRepository.save(currentUser);
         updateProductAvgRating(review.getProduct().getId());
 
+        orderItem.setIsReviewed(true);
+        orderItemRepository.save(orderItem);
         return review.getId();
     }
 
@@ -196,11 +188,11 @@ public class ReviewService {
     }
 
     @Transactional
-    public void deleteImage(List<Long> imageDelete) throws IOException {
+    public void deleteImage(List<Long> imageDelete , Long reviewId) throws IOException {
         User currentUser = securityUtils.getCurrentUser();
         List<String> urls = new ArrayList<>();
         for(Long id : imageDelete) {
-            ImageReview imageReview = imageReviewRepository.findByIdAndStatus(id,Status.ACTIVE)
+            ImageReview imageReview = imageReviewRepository.findByIdAndStatusAndReviewId(id,Status.ACTIVE,reviewId)
                     .orElseThrow(()->new BusinessException(ErrorCode.BAD_REQUEST,"ReviewImage not found"));
             if(imageReview.getReview().getUser() != currentUser){
                 throw new BusinessException(ErrorCode.BAD_REQUEST,"Review does not belong to this user");
@@ -209,7 +201,7 @@ public class ReviewService {
             imageReview.setStatus(Status.INACTIVE);
             imageReviewRepository.delete(imageReview);
         }
-        cloudinaryHelper. deleteByUrl(urls);
+        cloudinaryHelper.deleteByUrl(urls);
     }
 
     @Transactional

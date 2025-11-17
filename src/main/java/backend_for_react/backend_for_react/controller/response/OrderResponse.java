@@ -30,6 +30,7 @@ public class OrderResponse {
     String deliveryAddress;
     BigDecimal totalAmount;
     String note;
+    Boolean isConfimed;
     BigDecimal totalFeeShip;
     BigDecimal discountValue;
     BigDecimal originalOrderAmount;

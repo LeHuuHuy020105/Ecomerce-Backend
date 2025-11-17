@@ -13,6 +13,8 @@ import java.util.List;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class OrderItemResponse {
     Long orderItemId;
+    Long productId;
+    Boolean isReviewed;
     ProductVariantResponse productVariantResponse;
     Integer quantity;
     BigDecimal listPriceSnapShot;

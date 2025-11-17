@@ -28,6 +28,7 @@ public class OrderMapper {
                 .deliveryDistrictName(order.getDeliveryDistrictName())
                 .deliveryProvinceName(order.getDeliveryProvinceName())
                 .note(order.getNote())
+                .isConfimed(order.isConfirmed())
                 .totalFeeShip(order.getTotalFeeForShip())
                 .discountValue(order.getVoucherDiscountValue())
                 .deliveryWardCode(order.getDeliveryWardCode())
@@ -43,6 +44,8 @@ public class OrderMapper {
     public static OrderItemResponse getOrderItemResponse(OrderItem orderItem) {
         return OrderItemResponse.builder()
                 .orderItemId(orderItem.getId())
+                .productId(orderItem.getProductVariant().getProduct().getId())
+                .isReviewed(orderItem.getIsReviewed())
                 .productVariantResponse(ProductVariantMapper.getProductVariantResponse(orderItem.getProductVariant()))
                 .quantity(orderItem.getQuantity())
                 .listPriceSnapShot(orderItem.getListPriceSnapShot())
